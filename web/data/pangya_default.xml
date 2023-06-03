@@ -1,0 +1,43 @@
+<?xml version="1.0" standalone="yes"?>
+<extracontents>
+  <topicons>
+    <event name="one_day_quest">
+      <normal name="2012_quest_arin_main_btn_n.tga" />
+      <over name="2012_quest_arin_main_btn_o.tga" />
+      <blink name="2012_quest_arin_main_btn_o.tga" />
+    </event>
+  </topicons>
+  <notice>
+    <file name="2016121601.jpg" />
+    <file name="2016121600.jpg" />
+    <file name="2016121500.jpg" />
+  </notice>
+  <lobby>
+    <wallpaper prob="1"><file name="main_bg.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="main_bg_2.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="main_bg_3.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="main_bg_4.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="main_bg_5.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="main_bg_7.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="main_bg_8.jpg"/></wallpaper>
+  </lobby>
+  <loading>
+    <wallpaper prob="1"><file name="loading_background.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_01.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_02.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_03.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_04.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_05.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_06.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_07.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_08.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_09.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_10.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_11.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_12.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_13.jpg"/></wallpaper>
+    <wallpaper prob="1"><file name="background_14.jpg"/></wallpaper>
+  </loading>
+  <replacement>
+  </replacement>
+</extracontents>

@@ -1,0 +1,232 @@
+{
+	"Messages": [
+		{
+			"Source": "\u0026Patch",
+			"Translation": "パッチ適用（\u0026P）"
+		},
+		{
+			"Source": "\u0026Quit",
+			"Translation": "終了（\u0026X）"
+		},
+		{
+			"Source": "\u0026Save",
+			"Translation": "保存（\u0026S）"
+		},
+		{
+			"Source": "\u0026Unpatch",
+			"Translation": "パッチ解除（\u0026U）"
+		},
+		{
+			"Source": "Admin Server",
+			"Translation": "管理サーバ"
+		},
+		{
+			"Source": "Auto-detect (slower)",
+			"Translation": "自動検出（遅延あり）"
+		},
+		{
+			"Source": "Browse",
+			"Translation": "ブラウズ"
+		},
+		{
+			"Source": "Channel Name",
+			"Translation": "チャネル名"
+		},
+		{
+			"Source": "Checking...",
+			"Translation": "確認中..."
+		},
+		{
+			"Source": "Click the tray icon to configure. Right click the tray icon to exit.",
+			"Translation": "トレイアイコンをクリックして設定します。トレイアイコンを右クリックして終了します。"
+		},
+		{
+			"Source": "Database",
+			"Translation": "データベース"
+		},
+		{
+			"Source": "Database Configuration",
+			"Translation": "データベース"
+		},
+		{
+			"Source": "Database URI",
+			"Translation": "データベースURI"
+		},
+		{
+			"Source": "E\u0026xit",
+			"Translation": "終了（\u0026X）"
+		},
+		{
+			"Source": "English",
+			"Translation": "英語 (English)"
+		},
+		{
+			"Source": "Error",
+			"Translation": "エラー"
+		},
+		{
+			"Source": "Error configuring services: %s - Either move Minibox to your PangYa directory, OR set the PangYa directory to the location of your client.",
+			"Translation": "サービス設定エラー：%s - Miniboxをパンヤディレクトリに移動するか、パンヤのディレクトリをクライアントの場所に設定してください。"
+		},
+		{
+			"Source": "Error loading settings from disk: %s",
+			"Translation": "ファイルからの設定の読み込みエラー：%s"
+		},
+		{
+			"Source": "Error saving to disk: %s; settings may not be retained next time you start Minibox.",
+			"Translation": "Miniboxを次回起動するとき、設定が保持されない可能性があります。ファイルへの保存エラー：%s"
+		},
+		{
+			"Source": "Fatal Error",
+			"Translation": "Fatal Error"
+		},
+		{
+			"Source": "Game Server",
+			"Translation": "ゲームサーバー"
+		},
+		{
+			"Source": "Japanese",
+			"Translation": "日本語"
+		},
+		{
+			"Source": "Language",
+			"Translation": "言語"
+		},
+		{
+			"Source": "Listen Addresses",
+			"Translation": "リッスンアドレス"
+		},
+		{
+			"Source": "Login Server",
+			"Translation": "ログインサーバー"
+		},
+		{
+			"Source": "Logs",
+			"Translation": "ログ"
+		},
+		{
+			"Source": "Main",
+			"Translation": "メイン"
+		},
+		{
+			"Source": "Main Configuration",
+			"Translation": "メイン"
+		},
+		{
+			"Source": "Message Server",
+			"Translation": "メッセージサーバー"
+		},
+		{
+			"Source": "Minibox - All-in-one PangYa Server",
+			"Translation": "Minibox - 全機能一体型パンヤサーバ"
+		},
+		{
+			"Source": "Minibox PangYa Server",
+			"Translation": "Miniboxパンヤサーバ"
+		},
+		{
+			"Source": "Network",
+			"Translation": "ネットワーク"
+		},
+		{
+			"Source": "Note: Consider moving Minibox to your PangYa install directory and running from there.",
+			"Translation": "注意：Miniboxをパンヤのインストールディレクトリに移動して、そこから起動することを検討してください。"
+		},
+		{
+			"Source": "PangYa Path",
+			"Translation": "パンヤのパス"
+		},
+		{
+			"Source": "PangYa Region",
+			"Translation": "パンヤの地域"
+		},
+		{
+			"Source": "Patch your PangYa installation with Rugburn to bypass GameGuard and redirect network requests. Visit rugburn.gg for more information.",
+			"Translation": "GameGuardをバイパスし、ネットワークリクエストをリダイレクトするために、パンヤのインストールにRugburnをパッチしてください。詳細はrugburn.ggをご覧ください。"
+		},
+		{
+			"Source": "Patching failed: %v",
+			"Translation": "パッチ適用に失敗しました：%v"
+		},
+		{
+			"Source": "QA Auth Server",
+			"Translation": "QA認証サーバ"
+		},
+		{
+			"Source": "Re-\u0026patch",
+			"Translation": "再適用"
+		},
+		{
+			"Source": "Rugburn",
+			"Translation": "Rugburn"
+		},
+		{
+			"Source": "SQLite3 Database (*.sqlite3)|*.sqlite3",
+			"Translation": "SQLite3データベース (*.sqlite3)|*.sqlite3"
+		},
+		{
+			"Source": "Server Name",
+			"Translation": "サーバーの名前"
+		},
+		{
+			"Source": "Server Names",
+			"Translation": "サーバー名"
+		},
+		{
+			"Source": "Set PangYa Path",
+			"Translation": "パンヤのパスを設定"
+		},
+		{
+			"Source": "Set SQLite3 Database",
+			"Translation": "SQLite3データベースを設定"
+		},
+		{
+			"Source": "Start",
+			"Translation": "スタート"
+		},
+		{
+			"Source": "Status: Error (Set pangya dir?)",
+			"Translation": "ステータス：エラー（パンヤのパスを設定しましたか？）"
+		},
+		{
+			"Source": "Status: Patched (ver: %s)",
+			"Translation": "ステータス：パッチ適用済み（ver：%s）"
+		},
+		{
+			"Source": "Status: Unknown Rugburn version",
+			"Translation": "ステータス：不明なRugburnバージョン"
+		},
+		{
+			"Source": "Status: Unknown ijl15 patch",
+			"Translation": "ステータス：不明なijl15パッチ"
+		},
+		{
+			"Source": "Status: Unpatched",
+			"Translation": "ステータス：パッチ未適用"
+		},
+		{
+			"Source": "Stop",
+			"Translation": "ストップ"
+		},
+		{
+			"Source": "The database will be created automatically if it does not exist.",
+			"Translation": "データベースが存在しない場合、自動的に作成されます"
+		},
+		{
+			"Source": "Topology Server",
+			"Translation": "トポロジーサーバ"
+		},
+		{
+			"Source": "Unpatching failed: %v",
+			"Translation": "パッチ解除に失敗しました：%v"
+		},
+		{
+			"Source": "Warning",
+			"Translation": "警告"
+		},
+		{
+			"Source": "Web Server",
+			"Translation": "Webサーバー"
+		}
+	]
+}

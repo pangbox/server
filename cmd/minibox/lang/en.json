@@ -1,0 +1,232 @@
+{
+	"Messages": [
+		{
+			"Source": "\u0026Patch",
+			"Translation": "\u0026Patch"
+		},
+		{
+			"Source": "\u0026Quit",
+			"Translation": "\u0026Quit"
+		},
+		{
+			"Source": "\u0026Save",
+			"Translation": "\u0026Save"
+		},
+		{
+			"Source": "\u0026Unpatch",
+			"Translation": "\u0026Unpatch"
+		},
+		{
+			"Source": "Admin Server",
+			"Translation": "Admin Server"
+		},
+		{
+			"Source": "Auto-detect (slower)",
+			"Translation": "Auto-detect (slower)"
+		},
+		{
+			"Source": "Browse",
+			"Translation": "Browse"
+		},
+		{
+			"Source": "Channel Name",
+			"Translation": "Channel Name"
+		},
+		{
+			"Source": "Checking...",
+			"Translation": "Checking..."
+		},
+		{
+			"Source": "Click the tray icon to configure. Right click the tray icon to exit.",
+			"Translation": "Click the tray icon to configure. Right click the tray icon to exit."
+		},
+		{
+			"Source": "Database",
+			"Translation": "Database"
+		},
+		{
+			"Source": "Database Configuration",
+			"Translation": "Database Configuration"
+		},
+		{
+			"Source": "Database URI",
+			"Translation": "Database URI"
+		},
+		{
+			"Source": "E\u0026xit",
+			"Translation": "E\u0026xit"
+		},
+		{
+			"Source": "English",
+			"Translation": "English"
+		},
+		{
+			"Source": "Error",
+			"Translation": "Error"
+		},
+		{
+			"Source": "Error configuring services: %s - Either move Minibox to your PangYa directory, OR set the PangYa directory to the location of your client.",
+			"Translation": "Error configuring services: %s - Either move Minibox to your PangYa directory, OR set the PangYa directory to the location of your client."
+		},
+		{
+			"Source": "Error loading settings from disk: %s",
+			"Translation": "Error loading settings from disk: %s"
+		},
+		{
+			"Source": "Error saving to disk: %s; settings may not be retained next time you start Minibox.",
+			"Translation": "Error saving to disk: %s; settings may not be retained next time you start Minibox."
+		},
+		{
+			"Source": "Fatal Error",
+			"Translation": "Fatal Error"
+		},
+		{
+			"Source": "Game Server",
+			"Translation": "Game Server"
+		},
+		{
+			"Source": "Japanese",
+			"Translation": "Japanese"
+		},
+		{
+			"Source": "Language",
+			"Translation": "Language"
+		},
+		{
+			"Source": "Listen Addresses",
+			"Translation": "Listen Addresses"
+		},
+		{
+			"Source": "Login Server",
+			"Translation": "Login Server"
+		},
+		{
+			"Source": "Logs",
+			"Translation": "Logs"
+		},
+		{
+			"Source": "Main",
+			"Translation": "Main"
+		},
+		{
+			"Source": "Main Configuration",
+			"Translation": "Main Configuration"
+		},
+		{
+			"Source": "Message Server",
+			"Translation": "Message Server"
+		},
+		{
+			"Source": "Minibox - All-in-one PangYa Server",
+			"Translation": "Minibox - All-in-one PangYa Server"
+		},
+		{
+			"Source": "Minibox PangYa Server",
+			"Translation": "Minibox PangYa Server"
+		},
+		{
+			"Source": "Network",
+			"Translation": "Network"
+		},
+		{
+			"Source": "Note: Consider moving Minibox to your PangYa install directory and running from there.",
+			"Translation": "Note: Consider moving Minibox to your PangYa install directory and running from there."
+		},
+		{
+			"Source": "PangYa Path",
+			"Translation": "PangYa Path"
+		},
+		{
+			"Source": "PangYa Region",
+			"Translation": "PangYa Region"
+		},
+		{
+			"Source": "Patch your PangYa installation with Rugburn to bypass GameGuard and redirect network requests. Visit rugburn.gg for more information.",
+			"Translation": "Patch your PangYa installation with Rugburn to bypass GameGuard and redirect network requests. Visit rugburn.gg for more information."
+		},
+		{
+			"Source": "Patching failed: %v",
+			"Translation": "Patching failed: %v"
+		},
+		{
+			"Source": "QA Auth Server",
+			"Translation": "QA Auth Server"
+		},
+		{
+			"Source": "Re-\u0026patch",
+			"Translation": "Re-\u0026patch"
+		},
+		{
+			"Source": "Rugburn",
+			"Translation": "Rugburn"
+		},
+		{
+			"Source": "SQLite3 Database (*.sqlite3)|*.sqlite3",
+			"Translation": "SQLite3 Database (*.sqlite3)|*.sqlite3"
+		},
+		{
+			"Source": "Server Name",
+			"Translation": "Server Name"
+		},
+		{
+			"Source": "Server Names",
+			"Translation": "Server Names"
+		},
+		{
+			"Source": "Set PangYa Path",
+			"Translation": "Set PangYa Path"
+		},
+		{
+			"Source": "Set SQLite3 Database",
+			"Translation": "Set SQLite3 Database"
+		},
+		{
+			"Source": "Start",
+			"Translation": "Start"
+		},
+		{
+			"Source": "Status: Error (Set pangya dir?)",
+			"Translation": "Status: Error (Set pangya dir?)"
+		},
+		{
+			"Source": "Status: Patched (ver: %s)",
+			"Translation": "Status: Patched (ver: %s)"
+		},
+		{
+			"Source": "Status: Unknown Rugburn version",
+			"Translation": "Status: Unknown Rugburn version"
+		},
+		{
+			"Source": "Status: Unknown ijl15 patch",
+			"Translation": "Status: Unknown ijl15 patch"
+		},
+		{
+			"Source": "Status: Unpatched",
+			"Translation": "Status: Unpatched"
+		},
+		{
+			"Source": "Stop",
+			"Translation": "Stop"
+		},
+		{
+			"Source": "The database will be created automatically if it does not exist.",
+			"Translation": "The database will be created automatically if it does not exist."
+		},
+		{
+			"Source": "Topology Server",
+			"Translation": "Topology Server"
+		},
+		{
+			"Source": "Unpatching failed: %v",
+			"Translation": "Unpatching failed: %v"
+		},
+		{
+			"Source": "Warning",
+			"Translation": "Warning"
+		},
+		{
+			"Source": "Web Server",
+			"Translation": "Web Server"
+		}
+	]
+}

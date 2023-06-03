@@ -1,0 +1,84 @@
+// Copyright (C) 2018-2023, John Chadwick <john@jchw.io>
+//
+// Permission to use, copy, modify, and/or distribute this software for any purpose
+// with or without fee is hereby granted, provided that the above copyright notice
+// and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+// REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+// FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+// INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+// OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+// THIS SOFTWARE.
+//
+// SPDX-FileCopyrightText: Copyright (c) 2018-2023 John Chadwick
+// SPDX-License-Identifier: ISC
+
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/pangbox/server/gen/proto/go/topologypb"; 
+
+// ServerEntry is the internal server entry used for storage.
+message ServerEntry {
+    Server server = 1;
+
+	google.protobuf.Timestamp last_ping = 2;
+
+	google.protobuf.Timestamp last_healthy = 3;
+}
+
+// Configuration stores static server configuration.
+message Configuration {
+    repeated Server servers = 1;
+}
+
+// Server is the server data provided by a node.
+message Server {
+    enum Type {
+        TYPE_UNSPECIFIED = 0;
+        TYPE_LOGIN_SERVER = 1;
+        TYPE_GAME_SERVER = 2;
+        TYPE_MESSAGE_SERVER = 3;
+    }
+
+	Type type = 1;
+	string name = 2;
+	uint32 id = 3;
+	uint32 num_users = 4;
+	uint32 max_users = 5;
+	string address = 6;
+	uint32 port = 7;
+	uint32 flags = 8;
+}
+
+message AddServerRequest {
+    Server server = 1;
+}
+
+message AddServerResponse {
+}
+
+message ListServersRequest {
+    Server.Type type = 1;
+}
+
+message ListServersResponse {
+    repeated Server server = 1;
+}
+
+message GetServerRequest {
+    uint32 id = 1;
+}
+
+message GetServerResponse {
+    Server server = 1;
+}
+
+service TopologyService {
+    rpc AddServer (AddServerRequest) returns (AddServerResponse);
+    rpc ListServers (ListServersRequest) returns (ListServersResponse);
+    rpc GetServer (GetServerRequest) returns (GetServerResponse);
+}

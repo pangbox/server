@@ -1,0 +1,10 @@
+version: v1
+plugins:
+  - plugin: go
+    path: ["go", "run", "google.golang.org/protobuf/cmd/protoc-gen-go"]
+    out: gen/proto/go
+    opt: paths=source_relative
+  - plugin: connect-go
+    out: gen/proto/go
+    path: ["go", "run", "github.com/bufbuild/connect-go/cmd/protoc-gen-connect-go"]
+    opt: paths=source_relative

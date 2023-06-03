@@ -1,0 +1,53 @@
+html {
+    font-family: sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eee;
+    height: 100vh;
+}
+
+.window {
+    margin: 1em;
+    padding: 1em;
+    background: rgba(255, 255, 255, 95%);
+    border-radius: 10px;
+    border: 2px solid #ddd;
+    box-shadow: 0px 5px 5px rgba(0, 0, 0, 10%);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0.2em 0;
+}
+
+.window h1 {
+    text-align: center;
+}
+
+fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.form-layout {
+    display: table;
+}
+
+.form-layout .form-control {
+    display: table-row;
+}
+
+.form-layout .form-control label,
+.form-layout .form-control input,
+.form-layout .form-control .skip-column {
+    display: table-cell;
+    margin: 0.5em;
+}
+
+.errors {
+    background-color: #ffaaaa;
+    border-radius: 10px;
+    padding: 5px;
+    margin: 5px;
+}

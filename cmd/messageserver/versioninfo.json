@@ -1,0 +1,43 @@
+{
+    "FixedFileInfo": {
+        "FileVersion": {
+            "Major": 1,
+            "Minor": 0,
+            "Patch": 0,
+            "Build": 0
+        },
+        "ProductVersion": {
+            "Major": 1,
+            "Minor": 0,
+            "Patch": 0,
+            "Build": 0
+        },
+        "FileFlagsMask": "3f",
+        "FileFlags ": "00",
+        "FileOS": "040004",
+        "FileType": "01",
+        "FileSubType": "00"
+    },
+    "StringFileInfo": {
+        "Comments": "Pangbox MessageServer",
+        "CompanyName": "Pangbox",
+        "FileDescription": "PangYa MessageServer emulator.",
+        "FileVersion": "v1.0.0.0",
+        "InternalName": "messageserver.exe",
+        "LegalCopyright": "Copyright (c) 2018-2023 John Chadwick",
+        "LegalTrademarks": "PangYa is a registered trademark of Ntreev Soft Co., Ltd. Corporation. Pangbox is not endorsed or related to Ntreev Soft Co., Ltd. Corporation in any way. PangYa and related trademarks are used strictly for purposes of identification.",
+        "OriginalFilename": "main.go",
+        "PrivateBuild": "",
+        "ProductName": "Pangbox",
+        "ProductVersion": "v1.0.0.0",
+        "SpecialBuild": ""
+    },
+    "VarFileInfo": {
+        "Translation": {
+            "LangID": "0409",
+            "CharsetID": "04B0"
+        }
+    },
+    "IconPath": "../../res/pangbox.ico",
+    "ManifestPath": ""
+}

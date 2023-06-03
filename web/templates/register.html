@@ -1,0 +1,37 @@
+{{ define "register" }}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pangbox - Register</title>
+    <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+    <div class="window">
+        <h1>Register</h1>
+        <form class="register" action="" method="post">
+            <fieldset class="form-layout">
+                {{ if .Errors }}
+                <div class="errors">
+                {{ range .Errors }}
+                    <div class="error">&bull; {{ . }}</div>
+                {{ end }}
+                </div>
+                {{ end }}
+                <div class="form-control">
+                    <label for="username">Username:</label>
+                    <input type="text" name="username" />
+                </div>
+                <div class="form-control">
+                    <label for="password">Password:</label>
+                    <input type="password" name="password" />
+                </div>
+                <div class="form-control">
+                    <div class="skip-column"></div>
+                    <input type="submit" value="Register" />
+                </div>
+            </fieldset>
+        </form>
+    </div>
+</body>
+</html>
+{{ end }}
