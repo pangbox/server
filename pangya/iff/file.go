@@ -20,14 +20,18 @@ package iff
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 
+	"github.com/go-restruct/restruct"
 	"github.com/pangbox/pangfiles/pak"
 	log "github.com/sirupsen/logrus"
 )
 
 type Archive struct {
+	ItemMap map[uint32]*Item
 }
 
 // Filenames to look for to find client IFF.
@@ -50,14 +54,112 @@ func LoadFromPak(fs pak.FS) (*Archive, error) {
 }
 
 func Load(data []byte) (*Archive, error) {
+	archive := &Archive{}
 	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return nil, err
 	}
 	for _, f := range r.File {
 		log.Debugf("Found IFF: %s", f.Name)
+		if f.Name == "Item.iff" {
+			r, err := f.Open()
+			if err != nil {
+				return nil, err
+			}
+			defer r.Close()
+			data, err := io.ReadAll(r)
+			if err != nil {
+				return nil, err
+			}
+			archive.loadItems(data)
+		}
 	}
-	return &Archive{}, nil
+	return archive, nil
+}
+
+func (a *Archive) loadItems(data []byte) error {
+	file, err := LoadItems(data)
+	if err != nil {
+		return err
+	}
+	a.ItemMap = make(map[uint32]*Item)
+	for _, item := range file.Records {
+		a.ItemMap[item.ID] = &item
+	}
+	return nil
+}
+
+func LoadItems(data []byte) (*File[Item], error) {
+	recordCount := binary.LittleEndian.Uint16(data[:2])
+	recordLength := (len(data) - 0x8) / int(recordCount)
+	version := Version(binary.LittleEndian.Uint32(data[4:8]))
+
+	switch version {
+	case Version11:
+		switch recordLength {
+		case 0x78:
+			return loadItemVersion[ItemV11_78](data)
+		case 0x98:
+			return loadItemVersion[ItemV11_98](data)
+		case 0xB0:
+			return loadItemVersion[ItemV11_B0](data)
+		case 0xC0:
+			return loadItemVersion[ItemV11_C0](data)
+		case 0xC4:
+			return loadItemVersion[ItemV11_C4](data)
+		case 0xD8:
+			// JP4xx has the common times after the model name
+			// this is back to normal in JP5xx
+			var testItem ItemV11_D8_2
+			restruct.Unpack(data[8:], binary.LittleEndian, &testItem)
+			if testItem.StartTime.IsZero() || testItem.StartTime.IsValid() {
+				return loadItemVersion[ItemV11_D8_2](data)
+			} else {
+				return loadItemVersion[ItemV11_D8_1](data)
+			}
+		default:
+			return nil, fmt.Errorf("unknown item iff v%d record size %d (please report)", version, recordLength)
+		}
+	case Version13:
+		switch recordLength {
+		case 0xE0:
+			return loadItemVersion[ItemV13_E0](data)
+		case 0xF8:
+			return loadItemVersion[ItemV13_F8](data)
+		default:
+			return nil, fmt.Errorf("unknown item iff v%d record size %d (please report)", version, recordLength)
+		}
+	default:
+		return nil, errors.New("unknown item iff version")
+	}
+}
+
+func loadItemVersion[T itemGeneric](data []byte) (*File[Item], error) {
+	result := &File[Item]{}
+	f, err := LoadFile[T](data)
+	if err != nil {
+		return nil, err
+	}
+	result.Header = f.Header
+	for _, record := range f.Records {
+		result.Records = append(result.Records, record.Generic())
+	}
+	size, err := restruct.SizeOf(f)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > size {
+		return nil, fmt.Errorf("short read: read %d of %d bytes", size, len(data))
+	}
+	return result, nil
+}
+
+func LoadFile[T any](data []byte) (*File[T], error) {
+	file := &File[T]{}
+	if err := restruct.Unpack(data, binary.LittleEndian, file); err != nil {
+		return nil, err
+	}
+	return file, nil
 }
 
 func findPangYaIFF(fs pak.FS) ([]byte, error) {

@@ -17,12 +17,31 @@
 
 package iff
 
+import "github.com/pangbox/server/pangya"
+
 type Course struct {
-	Common           Common
+	Active           bool
+	_                [3]byte
+	ID               uint32
+	Name             string `struct:"[40]byte"`
+	Level            byte
+	Icon             string `struct:"[40]byte"`
+	_                [3]byte
+	Price            uint32
+	DiscountPrice    uint32
+	Condition        uint32
+	ShopFlag         byte
+	MoneyFlag        byte
+	TimeFlag         byte
+	TimeByte         byte
+	Point            uint32
+	Unknown          [0x1C]byte
+	StartTime        pangya.SystemTime
+	EndTime          pangya.SystemTime
 	ShortName        string `struct:"[40]byte"`
 	LocalizedName    string `struct:"[40]byte"`
 	CourseFlag       byte
 	PropertyFileName string `struct:"[40]byte"`
-	Unknown          uint32
+	Unknown2         uint32
 	CourseSequence   string `struct:"[40]byte"`
 }

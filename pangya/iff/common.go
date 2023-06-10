@@ -17,28 +17,14 @@
 
 package iff
 
-import "github.com/pangbox/server/pangya"
-
-type Header struct {
-	RecordCount uint16
-	BindingID   uint16
-	Version     uint32
+type File[T any] struct {
+	Header
+	Records []T `struct:"size=Header.RecordCount"`
 }
 
-type Common struct {
-	Active        uint32
-	ID            uint32
-	Name          string `struct:"[40]byte"`
-	Level         byte
-	Icon          string `struct:"[40]byte"`
-	Price         uint32
-	DiscountPrice uint32
-	UsedPrice     uint32
-	ShopFlag      byte
-	MoneyFlag     byte
-	TimeFlag      byte
-	TimeByte      byte
-	Point         uint32
-	StartTime     pangya.SystemTime
-	EndTime       pangya.SystemTime
+type Header struct {
+	/* 0x00 */ RecordCount uint16
+	/* 0x02 */ BindingID uint16
+	/* 0x04 */ Version Version
+	/* 0x08 */
 }
