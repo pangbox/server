@@ -217,6 +217,7 @@ func (server *Server) ConfigureServices(opts Options) error {
 			Addr:      opts.WebAddr,
 			PangyaKey: server.pangyaKey,
 			PangyaDir: opts.PangyaDir,
+			AccountsService: server.accountsService,
 		}); err != nil {
 			return fmt.Errorf("configuring web server: %w", err)
 		}
