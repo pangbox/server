@@ -89,6 +89,7 @@ func (l *Handler) handleRegisterPost(w http.ResponseWriter, r *http.Request, _ h
 	}
 
 	// The client will MD5 the password before sending it.
+	// TODO: only US
 	passwordMD5 := md5.Sum([]byte(password))
 	passwordMD5Hex := strings.ToUpper(hex.EncodeToString(passwordMD5[:]))
 

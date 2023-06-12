@@ -9,7 +9,7 @@ type Item struct {
 	Active        bool
 	ID            uint32
 	Name          string
-	MaxRank       byte
+	Rank          byte
 	Icon          string
 	Price         uint32
 	DiscountPrice uint32
@@ -36,7 +36,7 @@ func (i ItemV11_78) Generic() Item {
 		Active:        i.Active,
 		ID:            i.ID,
 		Name:          i.Name,
-		MaxRank:       i.MaxRank,
+		Rank:          i.Rank,
 		Icon:          i.Icon,
 		Price:         i.Price,
 		DiscountPrice: i.DiscountPrice,
@@ -56,7 +56,7 @@ func (i ItemV11_98) Generic() Item {
 		Active:        i.Active,
 		ID:            i.ID,
 		Name:          i.Name,
-		MaxRank:       i.MaxRank,
+		Rank:          i.Rank,
 		Icon:          i.Icon,
 		Price:         i.Price,
 		DiscountPrice: i.DiscountPrice,
@@ -76,7 +76,7 @@ func (i ItemV11_B0) Generic() Item {
 		Active:        i.Active,
 		ID:            i.ID,
 		Name:          i.Name,
-		MaxRank:       i.MaxRank,
+		Rank:          i.Rank,
 		Icon:          i.Icon,
 		Price:         i.Price,
 		DiscountPrice: i.DiscountPrice,
@@ -98,7 +98,7 @@ func (i ItemV11_C0) Generic() Item {
 		Active:        i.Active,
 		ID:            i.ID,
 		Name:          i.Name,
-		MaxRank:       i.MaxRank,
+		Rank:          i.Rank,
 		Icon:          i.Icon,
 		Price:         i.Price,
 		DiscountPrice: i.DiscountPrice,
@@ -120,7 +120,7 @@ func (i ItemV11_D8_1) Generic() Item {
 		Active:        i.Active,
 		ID:            i.ID,
 		Name:          i.Name,
-		MaxRank:       i.MaxRank,
+		Rank:          i.Rank,
 		Icon:          i.Icon,
 		Price:         i.Price,
 		DiscountPrice: i.DiscountPrice,
@@ -142,7 +142,7 @@ func (i ItemV11_D8_2) Generic() Item {
 		Active:        i.Active,
 		ID:            i.ID,
 		Name:          i.Name,
-		MaxRank:       i.MaxRank,
+		Rank:          i.Rank,
 		Icon:          i.Icon,
 		Price:         i.Price,
 		DiscountPrice: i.DiscountPrice,
@@ -164,7 +164,7 @@ func (i ItemV13_E0) Generic() Item {
 		Active:        i.Active,
 		ID:            i.ID,
 		Name:          i.Name,
-		MaxRank:       i.MaxRank,
+		Rank:          i.Rank,
 		Icon:          i.Icon,
 		Price:         i.Price,
 		DiscountPrice: i.DiscountPrice,
@@ -187,7 +187,7 @@ func (i ItemV11_C4) Generic() Item {
 		Active:        i.Active,
 		ID:            i.ID,
 		Name:          i.Name,
-		MaxRank:       i.MaxRank,
+		Rank:          i.Rank,
 		Icon:          i.Icon,
 		Price:         i.Price,
 		DiscountPrice: i.DiscountPrice,
@@ -209,7 +209,7 @@ func (i ItemV13_F8) Generic() Item {
 		Active:        i.Active,
 		ID:            i.ID,
 		Name:          i.Name,
-		MaxRank:       i.MaxRank,
+		Rank:          i.Rank,
 		Icon:          i.Icon,
 		Price:         i.Price,
 		DiscountPrice: i.DiscountPrice,

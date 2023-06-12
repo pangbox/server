@@ -10,7 +10,7 @@ type ItemV11_78 struct {
 	/* 0x01 */ _ [3]byte
 	/* 0x04 */ ID uint32
 	/* 0x08 */ Name string `struct:"[40]byte"`
-	/* 0x30 */ MaxRank byte
+	/* 0x30 */ Rank byte
 	/* 0x31 */ Icon string `struct:"[40]byte"`
 	/* 0x59 */ _ [3]byte
 	/* 0x5C */ Price uint32
@@ -31,7 +31,7 @@ type ItemV11_98 struct {
 	/* 0x01 */ _ [3]byte
 	/* 0x04 */ ID uint32
 	/* 0x08 */ Name string `struct:"[40]byte"`
-	/* 0x30 */ MaxRank byte
+	/* 0x30 */ Rank byte
 	/* 0x31 */ Icon string `struct:"[40]byte"`
 	/* 0x59 */ _ [3]byte
 	/* 0x5C */ Price uint32
@@ -54,7 +54,7 @@ type ItemV11_B0 struct {
 	/* 0x01 */ _ [3]byte
 	/* 0x04 */ ID uint32
 	/* 0x08 */ Name string `struct:"[64]byte"`
-	/* 0x48 */ MaxRank byte
+	/* 0x48 */ Rank byte
 	/* 0x49 */ Icon string `struct:"[40]byte"`
 	/* 0x71 */ _ [3]byte
 	/* 0x74 */ Price uint32
@@ -77,7 +77,7 @@ type ItemV11_C0 struct {
 	/* 0x01 */ _ [3]byte
 	/* 0x04 */ ID uint32
 	/* 0x08 */ Name string `struct:"[40]byte"`
-	/* 0x30 */ MaxRank byte
+	/* 0x30 */ Rank byte
 	/* 0x31 */ Icon string `struct:"[40]byte"`
 	/* 0x59 */ _ [3]byte
 	/* 0x5C */ Price uint32
@@ -101,7 +101,7 @@ type ItemV11_D8_1 struct {
 	/* 0x01 */ _ [3]byte
 	/* 0x04 */ ID uint32
 	/* 0x08 */ Name string `struct:"[64]byte"`
-	/* 0x48 */ MaxRank byte
+	/* 0x48 */ Rank byte
 	/* 0x49 */ Icon string `struct:"[40]byte"`
 	/* 0x71 */ _ [3]byte
 	/* 0x74 */ Price uint32
@@ -125,7 +125,7 @@ type ItemV11_D8_2 struct {
 	/* 0x01 */ _ [3]byte
 	/* 0x04 */ ID uint32
 	/* 0x08 */ Name string `struct:"[64]byte"`
-	/* 0x48 */ MaxRank byte
+	/* 0x48 */ Rank byte
 	/* 0x49 */ Icon string `struct:"[40]byte"`
 	/* 0x71 */ _ [3]byte
 	/* 0x74 */ Price uint32
@@ -149,7 +149,7 @@ type ItemV11_C4 struct {
 	/* 0x01 */ _ [3]byte
 	/* 0x04 */ ID uint32
 	/* 0x08 */ Name string `struct:"[40]byte"`
-	/* 0x30 */ MaxRank byte
+	/* 0x30 */ Rank byte
 	/* 0x31 */ Icon string `struct:"[40]byte"`
 	/* 0x59 */ _ [3]byte
 	/* 0x5C */ Price uint32
@@ -174,7 +174,7 @@ type ItemV13_E0 struct {
 	/* 0x01 */ _ [3]byte
 	/* 0x04 */ ID uint32
 	/* 0x08 */ Name string `struct:"[40]byte"`
-	/* 0x30 */ MaxRank byte
+	/* 0x30 */ Rank byte
 	/* 0x31 */ Icon string `struct:"[40]byte"`
 	/* 0x59 */ _ [3]byte
 	/* 0x5C */ Price uint32
@@ -200,7 +200,7 @@ type ItemV13_F8 struct {
 	/* 0x01 */ _ [3]byte
 	/* 0x04 */ ID uint32
 	/* 0x08 */ Name string `struct:"[64]byte"`
-	/* 0x48 */ MaxRank byte
+	/* 0x48 */ Rank byte
 	/* 0x49 */ Icon string `struct:"[40]byte"`
 	/* 0x71 */ _ [3]byte
 	/* 0x74 */ Price uint32

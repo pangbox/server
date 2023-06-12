@@ -47,6 +47,7 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x00F6: &ServerMultiplayerLeft{},
 	0x010E: &Server010E{},
 	0x011F: &ServerTutorialStatus{},
+	0x0158: &ServerPlayerStats{},
 	0x01F6: &Server01F6{},
 	0x0210: &ServerInboxNotify{},
 	0x0211: &ServerInboxList{},
@@ -125,81 +126,70 @@ type ServerCharData struct {
 type PlayerInfo struct {
 	Username         string `struct:"[22]byte"`
 	Nickname         string `struct:"[22]byte"`
-	GuildName        string `struct:"[17]byte"`
-	GuildEmblemImage string `struct:"[12]byte"`
-	Unknown          [71]byte
-	Flag             byte
-	Unknown2         uint16
-	Unknown3         uint16
+	GuildName        string `struct:"[21]byte"`
+	GuildEmblemImage string `struct:"[24]byte"`
+	ConnID           uint32
+	Unknown          [12]byte
+	Unknown2         uint32
+	Unknown3         uint32
 	Unknown4         uint16
-	Unknown5         uint16
+	Unknown5         [6]byte
 	Unknown6         [16]byte
 	GlobalID         string `struct:"[128]byte"`
+	UserID           uint32
 }
 
-type PlayerGameInfo struct {
-	Stroke     uint32
-	Putt       uint32
-	Time       uint32
-	StrokeTime uint32
-	Unknown    float32
-	Unknown2   uint32
-	Unknown3   uint32
-	Unknown4   uint32
-	Unknown5   uint32
-	Unknown6   uint32
-	Unknown7   uint32
-	Unknown8   uint16
-	Unknown9   uint32
-	Unknown10  uint32
-	Unknown11  uint32
-	Unknown12  uint32
-	Unknown13  float32
-	Unknown14  float32
-	Unknown15  uint32
-	Level      byte
-	Pang       uint64
-	Unknown16  uint32
-	Unknown17  [6]byte
-	Unknown18  [5]uint64
-	Unknown19  uint64
-	Unknown20  uint32
-	Unknown21  uint32
-	Unknown22  uint32
-	Unknown23  uint32
-	Unknown24  uint32
-	Unknown25  uint32
-	Unknown26  uint32
-	Unknown27  uint32
-	Unknown28  uint32
-	Unknown29  uint32
-	Unknown30  uint32
-	Unknown31  uint32
-	Unknown32  uint64
-	Unknown33  uint32
-	Unknown34  uint32
-	Unknown35  uint32
-	Unknown36  uint32
-	Unknown37  uint32
-	Unknown38  uint32
-	Unknown39  uint16
-	Unknown40  uint32
-	Unknown41  uint32
-	Unknown42  uint32
-	Unknown43  uint32
-	Unknown44  uint32
-	Unknown45  uint32
-	Unknown46  uint32
-	Unknown47  uint32
-	Unknown48  uint32
-	Unknown49  uint16
+type PlayerStats struct {
+	TotalStrokes    uint32
+	TotalPutts      uint32
+	Time            uint32
+	StrokeTime      uint32
+	LongestDrive    float32
+	Unknown1        uint32
+	Unknown2        uint32
+	Unknown3        uint32
+	Unknown4        uint32
+	TotalHoles      uint32
+	Unknown5        uint32
+	TotalHIO        uint32
+	Unknown6        uint16
+	Unknown7        uint32
+	TotalAlbatross  uint32
+	Unknown8        uint32
+	Unknown9        uint32
+	LongestPutt     float32
+	LongestChip     float32
+	TotalXP         uint32
+	Level           byte
+	Pang            uint64
+	TotalScore      int32
+	Unknown10       [5]byte
+	Unknown11       [49]byte
+	Unknown12       uint32
+	Unknown13       uint32
+	Unknown14       uint32
+	Unknown15       uint32
+	Unknown16       uint32
+	Unknown17       [16]byte
+	ComboNum        uint32
+	ComboDenom      uint32
+	Unknown18       uint32
+	PangBattleTotal int32
+	Unknown19       uint32
+	Unknown20       uint32
+	Unknown21       uint32
+	Unknown22       uint32
+	Unknown23       uint32
+	Unknown24       [10]byte
+	Unknown25       uint32
+	Unknown26       [8]byte
 }
 
 type GamePlayer struct {
 	Number    uint16
 	Info      PlayerInfo
-	Game      PlayerGameInfo
-	Unknown   [11430]byte
+	Stats     PlayerStats
+	Unknown   [78]byte
 	Character pangya.PlayerCharacterData
 	Caddie    pangya.PlayerCaddieData
 	ClubSet   pangya.PlayerClubData
@@ -208,11 +198,28 @@ type GamePlayer struct {
 	NumCards  uint8
 }
 
-type ServerGameInit struct {
-	ServerMessage_
-	Unknown    byte
+type GameInitFull struct {
 	NumPlayers byte `struct:"sizeof=Players"`
 	Players    []GamePlayer
+}
+
+type GameInitMinimal struct {
+	Unknown uint32
+	Time    pangya.SystemTime
+}
+
+type GameInitType byte
+
+const (
+	GameInitTypeFull    = 0
+	GameInitTypeMinimal = 4
+)
+
+type ServerGameInit struct {
+	ServerMessage_
+	SubType byte
+	Full    *GameInitFull    `struct-if:"SubType == 0"`
+	Minimal *GameInitMinimal `struct-if:"SubType == 4"`
 }
 
 // ServerUserInfo contains requested user information.
@@ -334,7 +341,7 @@ type ServerRoomList struct {
 type RoomListUser struct {
 	ConnID            uint32
 	Nickname          string `struct:"[22]byte"`
-	GuildName         string `struct:"[20]byte"`
+	GuildName         string `struct:"[17]byte"`
 	Slot              uint8
 	Flag              uint32
 	TitleID           uint32
@@ -347,6 +354,7 @@ type RoomListUser struct {
 	SkinUnknown2      uint32
 	Flag2             uint16
 	Rank              uint8
+	UnknownPadding    [3]byte
 	Unknown           uint8
 	Unknown2          uint16
 	GuildID           uint32
@@ -521,6 +529,14 @@ type Server010E struct {
 type ServerTutorialStatus struct {
 	ServerMessage_
 	Unknown [6]byte
+}
+
+type ServerPlayerStats struct {
+	ServerMessage_
+
+	SessionID uint32
+	Unknown   byte
+	Stats     PlayerStats
 }
 
 type Server01F6 struct {

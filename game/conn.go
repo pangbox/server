@@ -232,10 +232,11 @@ func (c *Conn) Handle(ctx context.Context) error {
 			self := RoomListUser{
 				ConnID:           uint32(session.SessionID),
 				Nickname:         player.Nickname.String,
+				Rank:             uint8(player.Rank),
 				GuildName:        "",
 				Slot:             1,
 				CharTypeID:       playerGameData.EquippedCharacter.CharTypeID,
-				Flag2:            520, // ?
+				Flag2:            520,
 				GuildEmblemImage: "guildmark",
 				UserID:           uint32(player.PlayerID),
 				CharacterData:    playerGameData.EquippedCharacter,
@@ -244,9 +245,11 @@ func (c *Conn) Handle(ctx context.Context) error {
 				ConnID:           0xFEEE,
 				Nickname:         "other",
 				GuildName:        "",
+				PortraitSlotID:   0x38C00083,
+				Rank:             uint8(pangya.JuniorA),
 				Slot:             2,
-				CharTypeID:       0x04000005,
-				Flag2:            520,
+				CharTypeID:       0x04000007,
+				Flag2:            0,
 				GuildEmblemImage: "guildmark",
 				UserID:           0x2000,
 				CharacterData: pangya.PlayerCharacterData{
@@ -270,39 +273,47 @@ func (c *Conn) Handle(ctx context.Context) error {
 		case *ClientAssistModeToggle:
 			c.SendMessage(&ServerAssistModeToggled{})
 			// TODO: Should send user status update; need to look at packet dumps.
-		case *ClientPlayerReady:
+		case *ClientPlayerReady, *ClientPlayerStartGame:
 			c.SendMessage(&Server0230{})
 			c.SendMessage(&Server0231{})
+			c.SendRaw([]byte{0x77, 0x00, 0x64, 0x00, 0x00, 0x00})
 			c.SendMessage(&ServerGameInit{
-				NumPlayers: 2,
-				Players: []GamePlayer{
-					{
-						Number: 1,
-						Info: PlayerInfo{
-							Username: player.Username,
-							Nickname: player.Nickname.String,
+				SubType: GameInitTypeFull,
+				Full: &GameInitFull{
+					NumPlayers: 2,
+					Players: []GamePlayer{
+						{
+							Number: 1,
+							Info: PlayerInfo{
+								Username: player.Username,
+								Nickname: player.Nickname.String,
+								ConnID:   uint32(session.SessionID),
+								UserID:   uint32(player.PlayerID),
+							},
+							Stats:     PlayerStats{},
+							Character: playerGameData.EquippedCharacter,
+							Caddie:    playerGameData.EquippedCaddie,
+							ClubSet:   playerGameData.EquippedClub,
+							Mascot:    playerGameData.EquippedMascot,
+							StartTime: pangya.SystemTime{},
+							NumCards:  0,
 						},
-						Game:      PlayerGameInfo{},
-						Character: playerGameData.EquippedCharacter,
-						Caddie:    playerGameData.EquippedCaddie,
-						ClubSet:   playerGameData.EquippedClub,
-						Mascot:    playerGameData.EquippedMascot,
-						StartTime: pangya.SystemTime{},
-						NumCards:  0,
-					},
-					{
-						Number: 2,
-						Info: PlayerInfo{
-							Username: "otheru",
-							Nickname: "other",
+						{
+							Number: 2,
+							Info: PlayerInfo{
+								Username: "otheru",
+								Nickname: "other",
+								ConnID:   uint32(0xFEEE),
+								UserID:   uint32(0x2000),
+							},
+							Stats:     PlayerStats{},
+							Character: playerGameData.EquippedCharacter,
+							Caddie:    playerGameData.EquippedCaddie,
+							ClubSet:   playerGameData.EquippedClub,
+							Mascot:    playerGameData.EquippedMascot,
+							StartTime: pangya.SystemTime{},
+							NumCards:  0,
 						},
-						Game:      PlayerGameInfo{},
-						Character: playerGameData.EquippedCharacter,
-						Caddie:    playerGameData.EquippedCaddie,
-						ClubSet:   playerGameData.EquippedClub,
-						Mascot:    playerGameData.EquippedMascot,
-						StartTime: pangya.SystemTime{},
-						NumCards:  0,
 					},
 				},
 			})
@@ -325,6 +336,35 @@ func (c *Conn) Handle(ctx context.Context) error {
 				})
 			}
 			c.SendMessage(gameData)
+			/*c.SendMessage(&ServerRoomGameData{
+				Course:          11,
+				Unknown:         0,
+				HoleProgression: 3,
+				NumHoles:        3,
+				Unknown2:        0,
+				ShotTimerMS:     300000,
+				GameTimerMS:     0,
+				Holes: []HoleInfo{
+					{
+						HoleID: 2159514729,
+						Pin:    0,
+						Course: 11,
+						Num:    14,
+					},
+					{
+						HoleID: 358258534,
+						Pin:    1,
+						Course: 11,
+						Num:    6,
+					},
+					{
+						HoleID: 3739427069,
+						Pin:    2,
+						Course: 11,
+						Num:    3,
+					},
+				},
+			})*/
 			// (currently crashes...)
 		case *ClientRequestInboxList:
 			// TODO: need new sql message table

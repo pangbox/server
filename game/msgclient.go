@@ -32,6 +32,7 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x000B: &ClientTutorialStart{},
 	0x000C: &ClientRoomUserEquipmentChange{},
 	0x000D: &ClientPlayerReady{},
+	0x000E: &ClientPlayerStartGame{},
 	0x000F: &ClientRoomLeave{},
 	0x001A: &Client001A{},
 	0x001D: &ClientBuyItem{},
@@ -144,6 +145,12 @@ type ClientRoomUserEquipmentChange struct {
 type ClientPlayerReady struct {
 	ClientMessage_
 	State byte
+}
+
+// ClientPlayerStartGame
+type ClientPlayerStartGame struct {
+	ClientMessage_
+	Unknown uint32
 }
 
 // ClientRoomLeave is sent by the client when leaving a room back to lobby
