@@ -15,7 +15,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2018-2023 John Chadwick
 // SPDX-License-Identifier: ISC
 
-package game
+package gamepacket
 
 import "github.com/pangbox/server/common"
 

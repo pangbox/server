@@ -37,6 +37,7 @@ type Archive struct {
 // Filenames to look for to find client IFF.
 var iffSearchOrder = []string{
 	"pangya_gb.iff",
+	"pangya_us.iff", // older US, before global
 	"pangya_jp.iff",
 	"pangya_eu.iff",
 	"pangya_th.iff",

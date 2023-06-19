@@ -49,9 +49,13 @@ type updateListCacheEntry struct {
 }
 
 type updateHandler struct {
-	key   pyxtea.Key
-	dir   string
+	key pyxtea.Key
+
+	dir string
+
+	// +checklocks:mutex
 	cache map[string]updateListCacheEntry
+
 	mutex sync.RWMutex
 }
 

@@ -33,6 +33,10 @@ type ConnectMessage struct {
 	Unknown5 uint16
 }
 
+func (c *ConnectMessage) SetKey(key uint8) {
+	c.Key = uint16(key)
+}
+
 // Server0001 is an unknown message.
 type Server0001 struct {
 	ServerMessage_

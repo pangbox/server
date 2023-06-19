@@ -19,12 +19,9 @@ package login
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
-	"math/rand"
 
 	"github.com/bufbuild/connect-go"
-	"github.com/go-restruct/restruct"
 	"github.com/pangbox/server/common"
 	"github.com/pangbox/server/database/accounts"
 	"github.com/pangbox/server/gen/dbmodels"
@@ -35,32 +32,9 @@ import (
 
 // Conn holds the state for a connection to the server.
 type Conn struct {
-	common.ServerConn[ClientMessage, ServerMessage]
+	*common.ServerConn[ClientMessage, ServerMessage]
 	topologyClient  topologypbconnect.TopologyServiceClient
 	accountsService *accounts.Service
-}
-
-// SendHello sends the initial handshake bytes to the client.
-func (c *Conn) SendHello() error {
-	data, err := restruct.Pack(binary.LittleEndian, &ConnectMessage{
-		Unknown1: 0x0b00,
-		Unknown2: 0x0000,
-		Unknown3: 0x0000,
-		Key:      uint16(c.Key),
-		Unknown4: 0x0000,
-		ServerID: 0x2775,
-		Unknown6: 0x0000,
-	})
-	if err != nil {
-		return err
-	}
-
-	_, err = c.Socket.Write(data)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // GetServerList returns a server list using the topology store.
@@ -90,10 +64,16 @@ func (c *Conn) GetServerList(ctx context.Context, typ topologypb.Server_Type) (*
 
 // Handle runs the main connection loop.
 func (c *Conn) Handle(ctx context.Context) error {
-	log := c.Log
-	c.Key = uint8(rand.Intn(16))
+	log := c.Log()
 
-	err := c.SendHello()
+	err := c.SendHello(&ConnectMessage{
+		Unknown1: 0x0b00,
+		Unknown2: 0x0000,
+		Unknown3: 0x0000,
+		Unknown4: 0x0000,
+		ServerID: 0x2775,
+		Unknown6: 0x0000,
+	})
 	if err != nil {
 		return fmt.Errorf("sending hello: %w", err)
 	}
@@ -113,20 +93,19 @@ func (c *Conn) Handle(ctx context.Context) error {
 
 	if err == accounts.ErrUnknownUsername || err == accounts.ErrInvalidPassword {
 		log.Infof("Bad credentials.")
-		c.SendMessage(&ServerLogin{
+		c.SendMessage(ctx, &ServerLogin{
 			Status: LoginStatusError,
 			Error: &LoginError{
 				Error: LoginErrorInvalidCredentials,
 			},
 		})
-		c.Socket.Close()
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("database error during authentication: %w", err)
 	}
 
 	if !player.Nickname.Valid {
-		c.SendMessage(&ServerLogin{
+		c.SendMessage(ctx, &ServerLogin{
 			Status: LoginStatusSetNickname,
 			SetNickname: &LoginSetNickname{
 				Unknown: 0xFFFFFFFF,
@@ -144,7 +123,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 			case *ClientCheckNickname:
 				// TODO
 				log.Infof("TODO: check nickname %s", t.Nickname.Value)
-				c.SendMessage(&ServerNicknameCheckResponse{
+				c.SendMessage(ctx, &ServerNicknameCheckResponse{
 					Nickname: t.Nickname,
 				})
 			case *ClientSetNickname:
@@ -168,7 +147,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 	}
 
 	if !haveCharacters {
-		c.SendMessage(&ServerLogin{
+		c.SendMessage(ctx, &ServerLogin{
 			Status:       LoginStatusSetCharacter,
 			SetCharacter: &LoginSetCharacter{},
 		})
@@ -186,7 +165,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 					CharTypeID: t.CharacterID,
 					HairColor:  t.HairColor,
 				})
-				c.SendMessage(&Server0011{})
+				c.SendMessage(ctx, &Server0011{})
 				break CharacterSetup
 			default:
 				return fmt.Errorf("expected ClientSelectCharacter, got %T", t)
@@ -194,17 +173,17 @@ func (c *Conn) Handle(ctx context.Context) error {
 		}
 	}
 
-	session, err := c.accountsService.AddSession(ctx, player.PlayerID, c.Socket.RemoteAddr().String())
+	session, err := c.accountsService.AddSession(ctx, player.PlayerID, c.RemoteAddr().String())
 	if err != nil {
 		log.Errorf("Error creating session in DB: %v", err)
 	}
 
 	// TODO: make token
-	c.SendMessage(&ServerLoginSessionKey{
+	c.SendMessage(ctx, &ServerLoginSessionKey{
 		SessionKey: common.ToPString(session.SessionKey),
 	})
 
-	c.SendMessage(&ServerLogin{
+	c.SendMessage(ctx, &ServerLogin{
 		Success: &LoginSuccess{
 			Username: common.ToPString(player.Username),
 			Nickname: common.ToPString(player.Nickname.String),
@@ -217,14 +196,14 @@ func (c *Conn) Handle(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("listing message servers: %w", err)
 	}
-	c.SendMessage(&ServerMessageServerList{ServerList: *messageServers})
+	c.SendMessage(ctx, &ServerMessageServerList{ServerList: *messageServers})
 
 	log.Info("sending game server list")
 	gameServers, err := c.GetServerList(ctx, topologypb.Server_TYPE_GAME_SERVER)
 	if err != nil {
 		return fmt.Errorf("listing game servers: %w", err)
 	}
-	c.SendMessage(&ServerGameServerList{ServerList: *gameServers})
+	c.SendMessage(ctx, &ServerGameServerList{ServerList: *gameServers})
 
 	log.Info("waiting for response.")
 	msg, err = c.ReadMessage()
@@ -239,7 +218,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 		return fmt.Errorf("expected ClientSelectServer, got %T", t)
 	}
 
-	c.SendMessage(&ServerGameSessionKey{
+	c.SendMessage(ctx, &ServerGameSessionKey{
 		SessionKey: common.ToPString(session.SessionKey),
 	})
 

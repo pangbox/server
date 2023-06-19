@@ -35,11 +35,16 @@ type RugburnOptions struct {
 type RugburnPatcher struct {
 	mu sync.RWMutex
 
+	// +checklocks:mu
 	path string
+	// +checklocks:mu
 	calc int64
 
-	haveOrig      bool
-	rugburnVer    string
+	// +checklocks:mu
+	haveOrig bool
+	// +checklocks:mu
+	rugburnVer string
+	// +checklocks:mu
 	rugburnVerErr error
 }
 
@@ -55,13 +60,13 @@ func (p *RugburnPatcher) Configure(opts RugburnOptions) {
 }
 
 func (p *RugburnPatcher) recalc() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	finfo, err := os.Stat(p.path)
 	if err != nil {
 		return err
 	}
-
-	p.mu.Lock()
-	defer p.mu.Unlock()
 
 	ncalc := finfo.Size() ^ finfo.ModTime().Unix()
 	if p.calc == ncalc {
@@ -110,6 +115,9 @@ func (p *RugburnPatcher) HaveOriginal() bool {
 }
 
 func (p *RugburnPatcher) Patch() error {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	ijl15, err := os.ReadFile(p.path)
 	if err != nil {
 		return err
@@ -136,6 +144,9 @@ func (p *RugburnPatcher) Patch() error {
 }
 
 func (p *RugburnPatcher) Unpatch() error {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	rugburn, err := os.ReadFile(p.path)
 	if err != nil {
 		return err

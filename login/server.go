@@ -54,12 +54,12 @@ func (s *Server) Listen(ctx context.Context, addr string) error {
 	logger := log.WithField("server", "LoginServer")
 	return s.baseServer.Listen(logger, addr, func(logger *log.Entry, socket net.Conn) error {
 		conn := Conn{
-			ServerConn: common.ServerConn[ClientMessage, ServerMessage]{
-				Socket:    socket,
-				Log:       logger,
-				ClientMsg: ClientMessageTable,
-				ServerMsg: ServerMessageTable,
-			},
+			ServerConn: common.NewServerConn(
+				socket,
+				logger,
+				ClientMessageTable,
+				ServerMessageTable,
+			),
 			topologyClient:  s.topologyClient,
 			accountsService: s.accountsService,
 		}

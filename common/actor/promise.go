@@ -15,29 +15,57 @@
 // SPDX-FileCopyrightText: Copyright (c) 2018-2023 John Chadwick
 // SPDX-License-Identifier: ISC
 
-package pubsub
+package actor
 
 import (
-	"time"
-
-	"github.com/google/uuid"
+	"context"
+	"errors"
+	"sync"
 )
 
-// Message is a pub/sub message.
-type Message struct {
-	UUID    uuid.UUID
-	Time    time.Time
-	Payload []byte
+var ErrClosed = errors.New("promise closed")
+
+// Promise is a simple promise-like object.
+type Promise[T any] struct {
+	once   sync.Once
+	doneCh chan struct{}
+	value  T
+	err    error
 }
 
-// Stream is a stream of incoming pub/sub messages.
-type Stream interface {
-	Channel() <-chan Message
-	Close() error
+func NewPromise[T any]() *Promise[T] {
+	return &Promise[T]{
+		doneCh: make(chan struct{}),
+	}
 }
 
-// PubSub is an interface for publish/subscribe messaging systems.
-type PubSub interface {
-	Publish(channel string, message Message) error
-	Subscribe(channel string) (Stream, error)
+func (p *Promise[T]) Resolve(value T) {
+	p.once.Do(func() {
+		p.value = value
+		close(p.doneCh)
+	})
+}
+
+func (p *Promise[T]) Reject(err error) {
+	p.once.Do(func() {
+		p.err = err
+		close(p.doneCh)
+	})
+}
+
+func (p *Promise[T]) Close() {
+	p.Reject(ErrClosed)
+}
+
+func (p *Promise[T]) Wait(ctx context.Context) (T, error) {
+	var t T
+	select {
+	case <-p.doneCh:
+		if p.err != nil {
+			return t, p.err
+		}
+		return p.value, nil
+	case <-ctx.Done():
+		return t, ctx.Err()
+	}
 }

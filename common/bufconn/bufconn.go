@@ -46,7 +46,8 @@ func (e netErrorTimeout) Timeout() bool   { return true }
 func (e netErrorTimeout) Temporary() bool { return false }
 
 var errClosed = fmt.Errorf("closed")
-var errTimeout net.Error = netErrorTimeout{error: fmt.Errorf("i/o timeout")}
+
+var errTimeout net.Error = netErrorTimeout{error: fmt.Errorf("i/o timeout")} // +checklocksignore
 
 // Listen returns a Listener that can only be contacted by its own Dialers and
 // creates buffered connections between the two.
@@ -117,20 +118,33 @@ type pipe struct {
 	//
 	// w and r are always in the range [0, cap(buf)) and [0, len(buf)].
 	buf  []byte
-	w, r int
+	w, r int // +checklocksignore
 
+	// +checklocks:mu
 	wwait sync.Cond
+
+	// +checklocks:mu
 	rwait sync.Cond
 
 	// Indicate that a write/read timeout has occurred
+
+	// +checklocks:mu
 	wtimedout bool
+
+	// +checklocks:mu
 	rtimedout bool
 
+	// +checklocks:mu
 	wtimer *time.Timer
+
+	// +checklocks:mu
 	rtimer *time.Timer
 
-	closed      bool
-	writeClosed bool
+	// +checklocks:mu
+	closed bool
+
+	// +checklocks:mu
+	writeClosed bool // +checklocksignore
 }
 
 func newPipe(sz int) *pipe {
@@ -144,11 +158,11 @@ func newPipe(sz int) *pipe {
 }
 
 func (p *pipe) empty() bool {
-	return p.r == len(p.buf)
+	return p.r == len(p.buf) // +checklocksignore
 }
 
 func (p *pipe) full() bool {
-	return p.r < len(p.buf) && p.r == p.w
+	return p.r < len(p.buf) && p.r == p.w // +checklocksignore
 }
 
 func (p *pipe) Read(b []byte) (n int, err error) {

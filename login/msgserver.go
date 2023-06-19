@@ -44,6 +44,10 @@ type ConnectMessage struct {
 	Unknown6 uint16
 }
 
+func (c *ConnectMessage) SetKey(key uint8) {
+	c.Key = uint16(key)
+}
+
 // ServerEntry represents a server in a ServerListMessage.
 type ServerEntry struct {
 	ServerName string `struct:"[40]byte"`
@@ -64,9 +68,9 @@ type ServerList struct {
 
 const (
 	LoginStatusSuccess      = 0
+	LoginStatusError        = 1
 	LoginStatusSetNickname  = 216
 	LoginStatusSetCharacter = 217
-	LoginStatusError        = 227
 )
 
 type LoginSuccess struct {
@@ -84,9 +88,9 @@ type LoginSetCharacter struct {
 }
 
 const (
+	LoginErrorInvalidCredentials    = 0
 	LoginErrorAlreadyLoggedIn       = 5100019
 	LoginErrorDuplicateConn         = 5100107
-	LoginErrorInvalidCredentials    = 5100143
 	LoginErrorInvalidReconnectToken = 5157002
 )
 
@@ -99,9 +103,9 @@ type ServerLogin struct {
 	Status byte
 
 	Success      *LoginSuccess      `struct-if:"Status == 0"`
+	Error        *LoginError        `struct-if:"Status == 1"`
 	SetNickname  *LoginSetNickname  `struct-if:"Status == 216"`
 	SetCharacter *LoginSetCharacter `struct-if:"Status == 217"`
-	Error        *LoginError        `struct-if:"Status == 227"`
 }
 
 type ServerGameServerList struct {

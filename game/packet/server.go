@@ -15,15 +15,18 @@
 // SPDX-FileCopyrightText: Copyright (c) 2018-2023 John Chadwick
 // SPDX-License-Identifier: ISC
 
-package game
+package gamepacket
 
 import (
 	"github.com/pangbox/server/common"
+	gamemodel "github.com/pangbox/server/game/model"
 	"github.com/pangbox/server/pangya"
 )
 
+type ServerConn = common.ServerConn[ClientMessage, ServerMessage]
+
 var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
-	0x0040: &ServerGlobalEvent{},
+	0x0040: &ServerEvent{},
 	0x0044: &ServerUserData{},
 	0x0046: &ServerUserCensus{},
 	0x0047: &ServerRoomList{},
@@ -34,20 +37,42 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x004C: &ServerRoomLeave{},
 	0x004E: &Server004E{},
 	0x0052: &ServerRoomGameData{},
+	0x0053: &ServerRoomStartHole{},
+	0x0055: &ServerRoomShotAnnounce{},
+	0x0056: &ServerRoomShotRotateAnnounce{},
+	0x0058: &ServerRoomShotPowerAnnounce{},
+	0x0059: &ServerRoomClubChangeAnnounce{},
+	0x005A: &ServerRoomItemUseAnnounce{},
+	0x005B: &ServerRoomSetWind{},
+	0x005D: &ServerRoomUserTypingAnnounce{},
+	0x0060: &ServerRoomShotCometReliefAnnounce{},
+	0x0063: &ServerRoomActiveUserAnnounce{},
+	0x0064: &ServerRoomShotSync{},
+	0x0065: &ServerRoomFinishHole{},
+	0x0066: &ServerRoomFinishGame{},
 	0x0070: &ServerCharData{},
 	0x0076: &ServerGameInit{},
+	0x0077: &Server0077{},
 	0x0078: &ServerPlayerReady{},
+	0x0086: &ServerRoomInfoResponse{},
+	0x0090: &ServerPlayerFirstShotReady{},
+	0x0092: &ServerOpponentQuit{},
 	0x0095: &ServerMoneyUpdate{},
+	0x009E: &ServerRoomSetWeather{},
 	0x009F: &ServerChannelList{},
 	0x00A1: &ServerUserInfo{},
-	0x00C4: &ServerRoomLoungeAction{},
+	0x00A3: &ServerPlayerLoadProgress{},
+	0x00C4: &ServerRoomAction{},
 	0x00C8: &ServerPangPurchaseData{},
+	0x00CC: &ServerRoomShotEnd{},
 	0x00F1: &ServerMessageConnect{},
 	0x00F5: &ServerMultiplayerJoined{},
 	0x00F6: &ServerMultiplayerLeft{},
-	0x010E: &Server010E{},
+	0x010E: &ServerPlayerHistory{},
 	0x011F: &ServerTutorialStatus{},
+	0x0151: &Server0151{},
 	0x0158: &ServerPlayerStats{},
+	0x016A: &Server016A{},
 	0x01F6: &Server01F6{},
 	0x0210: &ServerInboxNotify{},
 	0x0211: &ServerInboxList{},
@@ -68,24 +93,36 @@ type ConnectMessage struct {
 	Key     byte
 }
 
-// MessageDataType enumerates message data event types.
-type MessageDataType byte
+func (c *ConnectMessage) SetKey(key uint8) {
+	c.Key = key
+}
+
+// EventType enumerates message data event types.
+type EventType byte
 
 const (
-	ChatMessageData = 0
+	ChatMessageEvent = 0
+	GameEndEvent     = 16
 )
 
-// GlobalChatMessage contains a global chat message
-type GlobalChatMessage struct {
+// ChatMessage contains a global chat message
+type ChatMessage struct {
 	Nickname common.PString
 	Message  common.PString
 }
 
-// ServerGlobalEvent is a message that contains global chat events.
-type ServerGlobalEvent struct {
+type GameEnd struct {
+	Score   int32
+	Pang    uint64
+	Unknown uint8
+}
+
+// ServerEvent is a message that contains events.
+type ServerEvent struct {
 	ServerMessage_
-	Type MessageDataType
-	Data GlobalChatMessage
+	Type    byte
+	Data    ChatMessage
+	GameEnd *GameEnd `struct-if:"Type == 16"`
 }
 
 // ServerChannelList is a message that contains a list of all of the
@@ -96,23 +133,20 @@ type ServerChannelList struct {
 	Servers []pangya.ServerEntry
 }
 
+// PlayerMainData contains the main player information, sent after logging in.
+type PlayerMainData struct {
+	ClientVersion common.PString
+	ServerVersion common.PString
+	Game          uint16
+	PlayerData    pangya.PlayerData
+	Unknown2      [321]byte
+}
+
 // ServerUserData contains important state information.
 type ServerUserData struct {
 	ServerMessage_
-	Empty             byte
-	ClientVersion     common.PString
-	ServerVersion     common.PString
-	Game              uint16
-	UserInfo          pangya.UserInfo
-	PlayerStats       pangya.PlayerStats
-	Unknown           [78]byte
-	Items             pangya.PlayerEquipment
-	JunkData          [252 * 43]byte
-	EquippedCharacter pangya.PlayerCharacterData
-	EquippedCaddie    pangya.PlayerCaddieData
-	EquippedClub      pangya.PlayerClubData
-	EquippedMascot    pangya.PlayerMascotData
-	Unknown2          [321]byte
+	SubType  byte
+	MainData *PlayerMainData `struct-if:"SubType == 0"`
 }
 
 // ServerCharData contains the user's characters.
@@ -123,79 +157,11 @@ type ServerCharData struct {
 	Characters []pangya.PlayerCharacterData
 }
 
-type PlayerInfo struct {
-	Username         string `struct:"[22]byte"`
-	Nickname         string `struct:"[22]byte"`
-	GuildName        string `struct:"[21]byte"`
-	GuildEmblemImage string `struct:"[24]byte"`
-	ConnID           uint32
-	Unknown          [12]byte
-	Unknown2         uint32
-	Unknown3         uint32
-	Unknown4         uint16
-	Unknown5         [6]byte
-	Unknown6         [16]byte
-	GlobalID         string `struct:"[128]byte"`
-	UserID           uint32
-}
-
-type PlayerStats struct {
-	TotalStrokes    uint32
-	TotalPutts      uint32
-	Time            uint32
-	StrokeTime      uint32
-	LongestDrive    float32
-	Unknown1        uint32
-	Unknown2        uint32
-	Unknown3        uint32
-	Unknown4        uint32
-	TotalHoles      uint32
-	Unknown5        uint32
-	TotalHIO        uint32
-	Unknown6        uint16
-	Unknown7        uint32
-	TotalAlbatross  uint32
-	Unknown8        uint32
-	Unknown9        uint32
-	LongestPutt     float32
-	LongestChip     float32
-	TotalXP         uint32
-	Level           byte
-	Pang            uint64
-	TotalScore      int32
-	Unknown10       [5]byte
-	Unknown11       [49]byte
-	Unknown12       uint32
-	Unknown13       uint32
-	Unknown14       uint32
-	Unknown15       uint32
-	Unknown16       uint32
-	Unknown17       [16]byte
-	ComboNum        uint32
-	ComboDenom      uint32
-	Unknown18       uint32
-	PangBattleTotal int32
-	Unknown19       uint32
-	Unknown20       uint32
-	Unknown21       uint32
-	Unknown22       uint32
-	Unknown23       uint32
-	Unknown24       [10]byte
-	Unknown25       uint32
-	Unknown26       [8]byte
-}
-
 type GamePlayer struct {
-	Number    uint16
-	Info      PlayerInfo
-	Stats     PlayerStats
-	Unknown   [78]byte
-	Character pangya.PlayerCharacterData
-	Caddie    pangya.PlayerCaddieData
-	ClubSet   pangya.PlayerClubData
-	Mascot    pangya.PlayerMascotData
-	StartTime pangya.SystemTime
-	NumCards  uint8
+	Number     uint16
+	PlayerData pangya.PlayerData
+	StartTime  pangya.SystemTime
+	NumCards   uint8
 }
 
 type GameInitFull struct {
@@ -222,18 +188,29 @@ type ServerGameInit struct {
 	Minimal *GameInitMinimal `struct-if:"SubType == 4"`
 }
 
+type Server0077 struct {
+	ServerMessage_
+	Unknown uint32
+}
+
 // ServerUserInfo contains requested user information.
 type ServerUserInfo struct {
 	ServerMessage_
 	ResponseCode uint8
 	PlayerID     uint32
-	UserInfo     pangya.UserInfo
+	UserInfo     pangya.PlayerInfo
 }
 
-type ServerRoomLoungeAction struct {
+type ServerPlayerLoadProgress struct {
+	ServerMessage_
+	ConnID   uint32
+	Progress uint8
+}
+
+type ServerRoomAction struct {
 	ServerMessage_
 	ConnID uint32
-	LoungeAction
+	gamemodel.RoomAction
 }
 
 // ServerPangPurchaseData is sent after a pang purchase succeeds.
@@ -241,6 +218,11 @@ type ServerPangPurchaseData struct {
 	ServerMessage_
 	PangsRemaining uint64
 	PangsSpent     uint64
+}
+
+type ServerRoomShotEnd struct {
+	ServerMessage_
+	ConnID uint32
 }
 
 // ServerPlayerID is a message that contains the PlayerID and some
@@ -257,6 +239,7 @@ type UserCensusType byte
 
 const (
 	UserAdd        UserCensusType = 1
+	UserChange     UserCensusType = 2
 	UserRemove     UserCensusType = 3
 	UserListSet    UserCensusType = 4
 	UserListAppend UserCensusType = 5
@@ -264,28 +247,13 @@ const (
 
 const CensusMaxUsers = 36
 
-type CensusUser struct {
-	UserID        uint32
-	ConnID        uint32
-	RoomNumber    int16
-	Nickname      string `struct:"[22]byte"`
-	Rank          byte
-	Unknown       uint32
-	Badge         uint32
-	Unknown2      uint32
-	Unknown3      uint32
-	Unknown4      byte
-	GuildEmblemID string `struct:"[19]byte"`
-	GlobalID      string `struct:"[128]byte"`
-}
-
 // ServerUserCensus contains information about users currently online in
 // multiplayer
 type ServerUserCensus struct {
 	ServerMessage_
-	Type     UserCensusType
-	Count    uint8 `struct:"sizeof=UserList"`
-	UserList []CensusUser
+	Type       UserCensusType
+	Count      uint8 `struct:"sizeof=PlayerList"`
+	PlayerList []gamemodel.LobbyPlayer
 }
 
 // ListType enumerates the types of room list messages.
@@ -304,28 +272,31 @@ const (
 type RoomListRoom struct {
 	Name             string `struct:"[64]byte"`
 	Public           bool   `struct:"byte"`
-	Unknown          uint16
+	Open             bool   `struct:"uint16"`
 	UserMax          uint8
 	UserCount        uint8
-	Unknown2         [18]byte
+	Key              [16]byte // Known thanks to SuperSS; XOR pad for shot sync data
+	Unknown3         uint8
+	Unknown4         uint8
 	NumHoles         uint8
-	Number           uint16
 	HoleProgression  uint8
+	Number           int16
+	Unknown5         uint8
 	Course           uint8
 	ShotTimerMS      uint32
 	GameTimerMS      uint32
 	Flags            uint32
-	Unknown3         [76]byte
-	Unknown4         uint32
-	Unknown5         uint32
+	Unknown6         [68]byte
+	Unknown7         uint32
+	Unknown8         uint32
 	OwnerID          uint32
 	Class            byte
 	ArtifactID       uint32
-	Unknown6         uint32
+	Unknown9         uint32
 	EventNum         uint32
 	EventNumTop      uint32
 	EventShotTimerMS uint32
-	Unknown7         uint32
+	Unknown10        uint32
 }
 
 // ServerRoomList contains information about rooms currently open in
@@ -338,55 +309,24 @@ type ServerRoomList struct {
 	RoomList []RoomListRoom
 }
 
-type RoomListUser struct {
-	ConnID            uint32
-	Nickname          string `struct:"[22]byte"`
-	GuildName         string `struct:"[17]byte"`
-	Slot              uint8
-	Flag              uint32
-	TitleID           uint32
-	CharTypeID        uint32
-	PortraitBGID      uint32
-	PortraitFrameID   uint32
-	PortraitStickerID uint32
-	PortraitSlotID    uint32
-	SkinUnknown1      uint32
-	SkinUnknown2      uint32
-	Flag2             uint16
-	Rank              uint8
-	UnknownPadding    [3]byte
-	Unknown           uint8
-	Unknown2          uint16
-	GuildID           uint32
-	GuildEmblemImage  string `struct:"[12]byte"`
-	GuildEmblemID     uint8
-	UserID            uint32
-	LoungeState       uint32
-	Unknown3          uint16
-	Unknown4          uint32
-	X                 float32
-	Y                 float32
-	Z                 float32
-	Angle             float32
-	ShopUnknown       uint32
-	ShopName          string `struct:"[64]byte"`
-	MascotTypeID      uint32
-	GlobalID          string `struct:"[22]byte"`
-	Unknown5          [106]byte
-	Guest             bool `struct:"byte"`
-	AverageScore      float32
-	Unknown6          [3]byte
-	UnknownMisalign   byte // TODO: something either before or after here is misaligned
-	CharacterData     pangya.PlayerCharacterData
+// ServerRoomCensus reports on the users in a game room.
+type ServerRoomCensus struct {
+	ServerMessage_
+	Type       byte
+	Unknown    int16
+	ListSet    *RoomCensusListSet    `struct-if:"Type == 0"`
+	ListAdd    *RoomCensusListAdd    `struct-if:"Type == 1"`
+	ListRemove *RoomCensusListRemove `struct-if:"Type == 2"`
+	ListChange *RoomCensusListChange `struct-if:"Type == 3"`
 }
 
 type RoomCensusListSet struct {
-	UserCount uint8 `struct:"sizeof=UserList"`
-	UserList  []RoomListUser
+	PlayerCount uint8 `struct:"sizeof=PlayerList"`
+	PlayerList  []gamemodel.RoomPlayerEntry
 }
 
 type RoomCensusListAdd struct {
-	User RoomListUser
+	User gamemodel.RoomPlayerEntry
 }
 
 type RoomCensusListRemove struct {
@@ -395,18 +335,7 @@ type RoomCensusListRemove struct {
 
 type RoomCensusListChange struct {
 	ConnID uint32
-	User   RoomListUser
-}
-
-// ServerRoomCensus reports on the users in a game room.
-type ServerRoomCensus struct {
-	ServerMessage_
-	Type       byte
-	Unknown    uint16
-	ListSet    *RoomCensusListSet    `struct-if:"Type == 0"`
-	ListAdd    *RoomCensusListAdd    `struct-if:"Type == 1"`
-	ListRemove *RoomCensusListRemove `struct-if:"Type == 2"`
-	ListChange *RoomCensusListChange `struct-if:"Type == 3"`
+	User   gamemodel.RoomPlayerEntry
 }
 
 // ServerRoomStatus is sent when a room's settings or status changes.
@@ -434,7 +363,7 @@ type ServerRoomEquipmentData struct {
 
 type ServerRoomLeave struct {
 	ServerMessage_
-	RoomNumber uint16
+	RoomNumber int16
 }
 
 type Server004E struct {
@@ -458,27 +387,138 @@ type ServerRoomGameData struct {
 	Unknown2        uint32
 	ShotTimerMS     uint32
 	GameTimerMS     uint32
-	Holes           []HoleInfo `struct:"sizefrom=NumHoles"`
+	Holes           [18]HoleInfo // `struct:"sizefrom=NumHoles"`
 	RandomSeed      uint32
+	Unknown3        [18]byte
+}
+
+type ServerRoomStartHole struct {
+	ServerMessage_
+	ConnID uint32
+}
+
+type ServerRoomShotAnnounce struct {
+	ServerMessage_
+	ConnID           uint32
+	ShotStrength     float32
+	ShotAccuracy     float32
+	ShotEnglishCurve float32
+	ShotEnglishSpin  float32
+	Unknown2         [30]byte
+	Unknown3         [4]float32
+}
+
+type ServerRoomShotRotateAnnounce struct {
+	ServerMessage_
+	ConnID uint32
+	Angle  float32
+}
+
+type ServerRoomShotPowerAnnounce struct {
+	ServerMessage_
+	ConnID uint32
+	Level  uint8
+}
+
+type ServerRoomClubChangeAnnounce struct {
+	ServerMessage_
+	ConnID uint32
+	Club   uint8
+}
+
+type ServerRoomItemUseAnnounce struct {
+	ServerMessage_
+	ItemTypeID uint32
+	Unknown    uint32
+	ConnID     uint32
+}
+
+type ServerRoomSetWind struct {
+	ServerMessage_
+	Wind     uint8
+	Unknown  uint8
+	Unknown2 uint16
+	Reset    bool `struct:"bool"`
+}
+
+type ServerRoomUserTypingAnnounce struct {
+	ServerMessage_
+	ConnID uint32
+	Status int16
+}
+
+type ServerRoomShotCometReliefAnnounce struct {
+	ServerMessage_
+	ConnID  uint32
+	X, Y, Z float32
+}
+
+type ServerRoomActiveUserAnnounce struct {
+	ServerMessage_
+	ConnID uint32
+}
+
+type ServerRoomShotSync struct {
+	ServerMessage_
+	Data gamemodel.ShotSyncData
+}
+
+type ServerRoomFinishHole struct {
+	ServerMessage_
+}
+
+type PlayerGameResult struct {
+	ConnID    uint32
+	Place     uint8
+	Score     int8
+	Unknown   uint8
+	Unknown2  uint16
+	Pang      uint64
+	BonusPang uint64
+	Unknown3  uint64
+}
+
+type ServerRoomFinishGame struct {
+	ServerMessage_
+	NumPlayers uint8
+	Results    []PlayerGameResult `struct:"sizefrom=NumPlayers"`
+}
+
+type Server016A struct {
+	ServerMessage_
+	Unknown  byte
+	Unknown2 uint32
 }
 
 // ServerRoomJoin is sent when a room is joined.
 type ServerRoomJoin struct {
 	ServerMessage_
-	Status      byte
-	Unknown     byte
+	Status      uint16
 	RoomName    string `struct:"[64]byte"`
 	Unknown2    [25]byte
-	RoomNumber  uint16
+	RoomNumber  int16
 	Unknown3    [111]byte
 	EventNumber uint32
-	Unknown4    [12]byte
+	Unknown4    uint32
 }
 
 type ServerPlayerReady struct {
 	ServerMessage_
 	ConnID uint32
 	State  byte
+}
+
+type ServerRoomInfoResponse struct {
+	ServerMessage_
+	RoomInfo gamemodel.RoomInfo
+}
+
+type ServerPlayerFirstShotReady struct {
+	ServerMessage_
+}
+
+type ServerOpponentQuit struct {
+	ServerMessage_
 }
 
 type MoneyUpdateType uint16
@@ -506,6 +546,12 @@ type ServerMoneyUpdate struct {
 	PangBalance   *UpdatePangBalanceData   `struct-if:"Type == 273"`
 }
 
+type ServerRoomSetWeather struct {
+	ServerMessage_
+	Weather uint16
+	Unknown uint8
+}
+
 // ServerMessageConnect seems to make the client connect to the message server.
 // TODO: need to do more reverse engineering effort
 type ServerMessageConnect struct {
@@ -521,9 +567,16 @@ type ServerMultiplayerLeft struct {
 	ServerMessage_
 }
 
-type Server010E struct {
+type RecentPlayer struct {
+	Unknown  uint32
+	Nickname string `struct:"[22]byte"`
+	Username string `struct:"[22]byte"`
+	PlayerID uint32
+}
+
+type ServerPlayerHistory struct {
 	ServerMessage_
-	Unknown []byte
+	RecentPlayers [5]RecentPlayer
 }
 
 type ServerTutorialStatus struct {
@@ -531,12 +584,17 @@ type ServerTutorialStatus struct {
 	Unknown [6]byte
 }
 
+type Server0151 struct {
+	ServerMessage_
+	Unknown []byte
+}
+
 type ServerPlayerStats struct {
 	ServerMessage_
 
 	SessionID uint32
 	Unknown   byte
-	Stats     PlayerStats
+	Stats     pangya.PlayerStats
 }
 
 type Server01F6 struct {

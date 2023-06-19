@@ -30,7 +30,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-restruct/restruct"
 	"github.com/pangbox/server/common"
-	"github.com/pangbox/server/game"
+	gamepacket "github.com/pangbox/server/game/packet"
 	"github.com/pangbox/server/login"
 	"github.com/pangbox/server/message"
 )
@@ -49,9 +49,9 @@ func GetMessageTable(server string, origin string) (common.AnyMessageTable, erro
 	case "game":
 		switch origin {
 		case "server":
-			return game.ServerMessageTable.Any(), nil
+			return gamepacket.ServerMessageTable.Any(), nil
 		case "client":
-			return game.ClientMessageTable.Any(), nil
+			return gamepacket.ClientMessageTable.Any(), nil
 		default:
 			return nil, fmt.Errorf("unexpected origin %q; valid values are server, client", origin)
 		}

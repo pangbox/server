@@ -15,7 +15,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2018-2023 John Chadwick
 // SPDX-License-Identifier: ISC
 
-package game
+package gameserver
 
 import (
 	"context"
@@ -23,6 +23,8 @@ import (
 
 	"github.com/pangbox/server/common"
 	"github.com/pangbox/server/database/accounts"
+	gamepacket "github.com/pangbox/server/game/packet"
+	"github.com/pangbox/server/game/room"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	"github.com/pangbox/server/pangya/iff"
 	log "github.com/sirupsen/logrus"
@@ -45,10 +47,13 @@ type Server struct {
 	pangyaIFF       *iff.Archive
 	serverID        uint32
 	channelName     string
+	lobby           *room.Lobby
+	logger          *log.Entry
 }
 
 // New creates a new instance of the game server.
 func New(opts Options) *Server {
+	logger := log.WithField("server", "GameServer")
 	return &Server{
 		baseServer:      &common.BaseServer{},
 		topologyClient:  opts.TopologyClient,
@@ -56,20 +61,21 @@ func New(opts Options) *Server {
 		pangyaIFF:       opts.PangyaIFF,
 		serverID:        opts.ServerID,
 		channelName:     opts.ChannelName,
+		logger:          logger,
 	}
 }
 
 // Listen listens for connections on a given address and blocks indefinitely.
 func (s *Server) Listen(ctx context.Context, addr string) error {
-	logger := log.WithField("server", "GameServer")
-	return s.baseServer.Listen(logger, addr, func(logger *log.Entry, socket net.Conn) error {
+	s.lobby = room.NewLobby(ctx, s.logger)
+	return s.baseServer.Listen(s.logger, addr, func(logger *log.Entry, socket net.Conn) error {
 		conn := Conn{
-			ServerConn: common.ServerConn[ClientMessage, ServerMessage]{
-				Socket:    socket,
-				Log:       logger,
-				ClientMsg: ClientMessageTable,
-				ServerMsg: ServerMessageTable,
-			},
+			ServerConn: common.NewServerConn(
+				socket,
+				logger,
+				gamepacket.ClientMessageTable,
+				gamepacket.ServerMessageTable,
+			),
 			s: s,
 		}
 		return conn.Handle(ctx)

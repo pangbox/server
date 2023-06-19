@@ -15,15 +15,19 @@
 // SPDX-FileCopyrightText: Copyright (c) 2018-2023 John Chadwick
 // SPDX-License-Identifier: ISC
 
-//go:build tools
+package gamemodel
 
-package tools
-
-import (
-	_ "github.com/akavel/rsrc"
-	_ "github.com/bufbuild/buf/cmd/buf"
-	_ "github.com/josephspurrier/goversioninfo"
-	_ "github.com/kyleconroy/sqlc/cmd/sqlc"
-	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
-	_ "gvisor.dev/gvisor/tools/checklocks/cmd/checklocks"
-)
+type LobbyPlayer struct {
+	PlayerID         uint32
+	ConnID           uint32
+	RoomNumber       int16
+	Nickname         string `struct:"[22]byte"`
+	Rank             byte
+	Unknown          uint32
+	Badge            uint32
+	Unknown2         uint32
+	Unknown3         uint32
+	Unknown4         byte
+	GuildEmblemImage string `struct:"[18]byte"`
+	GlobalID         string `struct:"[128]byte"`
+}

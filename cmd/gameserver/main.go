@@ -25,7 +25,7 @@ import (
 	"github.com/pangbox/server/common/topology"
 	"github.com/pangbox/server/database"
 	"github.com/pangbox/server/database/accounts"
-	"github.com/pangbox/server/game"
+	gameserver "github.com/pangbox/server/game/server"
 	log "github.com/sirupsen/logrus"
 	"github.com/xo/dburl"
 )
@@ -66,7 +66,7 @@ func main() {
 	}
 
 	log.Println("Listening for game server on", listenAddr)
-	gameServer := game.New(game.Options{
+	gameServer := gameserver.New(gameserver.Options{
 		TopologyClient: topologyClient,
 		AccountsService: accounts.NewService(accounts.Options{
 			Database: db,

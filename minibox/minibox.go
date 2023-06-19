@@ -59,28 +59,42 @@ type Options struct {
 
 type Server struct {
 	mu  sync.RWMutex
-	log *log.Entry
+	log *log.Entry // +checklocksignore
 
 	// Fabric services
+	// +checklocks:mu
 	accountsService *accounts.Service
 
 	// Network services
+	// +checklocks:mu
 	Topology *TopologyServer
-	Web      *WebServer
-	Admin    *AdminServer
-	Login    *LoginServer
-	Game     *GameServer
-	Message  *MessageServer
-	QAAuth   *QAAuthServer
+	// +checklocks:mu
+	Web *WebServer
+	// +checklocks:mu
+	Admin *AdminServer
+	// +checklocks:mu
+	Login *LoginServer
+	// +checklocks:mu
+	Game *GameServer
+	// +checklocks:mu
+	Message *MessageServer
+	// +checklocks:mu
+	QAAuth *QAAuthServer
 
 	// Misc
+	// +checklocks:mu
 	Rugburn *RugburnPatcher
 
-	pangyaKey  pyxtea.Key
-	pangyaFS   *pak.FS
-	pangyaIFF  *iff.Archive
+	// +checklocks:mu
+	pangyaKey pyxtea.Key
+	// +checklocks:mu
+	pangyaFS *pak.FS
+	// +checklocks:mu
+	pangyaIFF *iff.Archive
+	// +checklocks:mu
 	lastDbOpts *DataOptions
-	lastOpts   *Options
+	// +checklocks:mu
+	lastOpts *Options
 }
 
 func topologyOptions(opts Options) (TopologyServerOptions, error) {
@@ -214,9 +228,9 @@ func (server *Server) ConfigureServices(opts Options) error {
 
 	if server.lastOpts.ShouldConfigureWeb(opts) {
 		if err := server.Web.Configure(WebOptions{
-			Addr:      opts.WebAddr,
-			PangyaKey: server.pangyaKey,
-			PangyaDir: opts.PangyaDir,
+			Addr:            opts.WebAddr,
+			PangyaKey:       server.pangyaKey,
+			PangyaDir:       opts.PangyaDir,
 			AccountsService: server.accountsService,
 		}); err != nil {
 			return fmt.Errorf("configuring web server: %w", err)

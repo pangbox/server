@@ -3,26 +3,35 @@ module github.com/pangbox/server
 go 1.20
 
 require (
+	github.com/akavel/rsrc v0.10.2
 	github.com/bufbuild/buf v1.19.0
 	github.com/bufbuild/connect-go v1.7.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-restruct/restruct v1.2.0-alpha
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v5 v5.3.1
+	github.com/josephspurrier/goversioninfo v1.4.0
+	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kyleconroy/sqlc v1.18.0
-	github.com/lib/pq v1.10.9
+	github.com/lxn/walk v0.0.0-20210112085537-c389da54e794
+	github.com/manifoldco/promptui v0.9.0
 	github.com/pangbox/pangcrypt v0.0.0-20181124232112-60117463a15d
 	github.com/pangbox/pangfiles v0.0.2-alpha.0.20230603175117-d8085775e1b5
-	github.com/pkg/errors v0.9.1
+	github.com/pangbox/rugburn v0.0.0-20230528190157-e19211ef1659
 	github.com/pressly/goose/v3 v3.11.2
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.2
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.20.1
+	github.com/wk8/go-ordered-map/v2 v2.1.7
 	github.com/xo/dburl v0.14.2
 	golang.org/x/crypto v0.9.0
+	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	golang.org/x/net v0.10.0
+	golang.org/x/sync v0.2.0
+	golang.org/x/sys v0.8.0
 	google.golang.org/protobuf v1.30.0
+	gvisor.dev/gvisor v0.0.0-20230615202126-6c8187194adf
 	modernc.org/sqlite v1.22.1
 )
 
@@ -30,11 +39,12 @@ require (
 	bazil.org/fuse v0.0.0-20200524192727-fb710f7dfd05 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230321174746-8dcc6526cfb1 // indirect
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/benbjohnson/clock v1.3.3 // indirect
 	github.com/billziss-gh/cgofuse v1.5.0 // indirect
 	github.com/bufbuild/protocompile v0.5.1 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytecodealliance/wasmtime-go/v8 v8.0.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
@@ -67,16 +77,12 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jdxcode/netrc v0.0.0-20221124155335-4616370d1a84 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/josephspurrier/goversioninfo v1.4.0 // indirect
-	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
-	github.com/lxn/polyglot v0.0.0-20120605161256-3427b7be6a34 // indirect
-	github.com/lxn/walk v0.0.0-20210112085537-c389da54e794 // indirect
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
-	github.com/manifoldco/promptui v0.9.0 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
@@ -86,12 +92,12 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
 	github.com/opencontainers/runc v1.1.7 // indirect
-	github.com/pangbox/rugburn v0.0.0-20230528190157-e19211ef1659 // indirect
 	github.com/pganalyze/pg_query_go/v4 v4.2.0 // indirect
 	github.com/pingcap/errors v0.11.5-0.20210425183316-da1aaba5fb63 // indirect
 	github.com/pingcap/log v0.0.0-20210906054005-afc726e70354 // indirect
 	github.com/pingcap/tidb/parser v0.0.0-20220725134311-c80026e61f00 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/profile v1.7.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rasky/go-lzo v0.0.0-20151023001055-affec0788321 // indirect
@@ -111,10 +117,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 // indirect
 	golang.org/x/mod v0.10.0 // indirect
-	golang.org/x/sync v0.2.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect

@@ -17,10 +17,38 @@
 
 package pangya
 
+import "time"
+
 type SystemTime struct {
 	/* 0x00 */ Year, Month, DayOfWeek, Day uint16
 	/* 0x08 */ Hour, Minute, Second, Milliseconds uint16
 	/* 0x10 */
+}
+
+func NewSystemTime(t time.Time) SystemTime {
+	return SystemTime{
+		Year:         uint16(t.Year()),
+		Month:        uint16(t.Month()),
+		DayOfWeek:    uint16(t.Weekday()),
+		Day:          uint16(t.Day()),
+		Hour:         uint16(t.Hour()),
+		Minute:       uint16(t.Minute()),
+		Second:       uint16(t.Second()),
+		Milliseconds: uint16(t.Nanosecond() / int(time.Millisecond)),
+	}
+}
+
+func (s SystemTime) Time() time.Time {
+	return time.Date(
+		int(s.Year),
+		time.Month(s.Month),
+		int(s.Day),
+		int(s.Hour),
+		int(s.Minute),
+		int(s.Second),
+		int(s.Milliseconds)*int(time.Millisecond),
+		time.UTC,
+	)
 }
 
 func (s SystemTime) IsZero() bool {

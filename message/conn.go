@@ -18,47 +18,27 @@
 package message
 
 import (
-	"encoding/binary"
 	"fmt"
-	"math/rand"
 
-	"github.com/go-restruct/restruct"
 	"github.com/pangbox/server/common"
 )
 
 // Conn holds the state for a connection to the server.
 type Conn struct {
-	common.ServerConn[ClientMessage, ServerMessage]
-}
-
-// SendHello sends the initial handshake bytes to the client.
-func (c *Conn) SendHello() error {
-	data, err := restruct.Pack(binary.LittleEndian, &ConnectMessage{
-		Unknown1: 0x0900,
-		Unknown2: 0x0000,
-		Unknown3: 0x002E,
-		Unknown4: 0x0101,
-		Key:      uint16(c.Key),
-		Unknown5: 0x0000,
-	})
-	if err != nil {
-		return err
-	}
-
-	_, err = c.Socket.Write(data)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	*common.ServerConn[ClientMessage, ServerMessage]
 }
 
 // Handle runs the main connection loop.
 func (c *Conn) Handle() error {
-	log := c.Log
-	c.Key = uint8(rand.Intn(16))
+	log := c.Log()
 
-	err := c.SendHello()
+	err := c.SendHello(&ConnectMessage{
+		Unknown1: 0x0900,
+		Unknown2: 0x0000,
+		Unknown3: 0x002E,
+		Unknown4: 0x0101,
+		Unknown5: 0x0000,
+	})
 	if err != nil {
 		return fmt.Errorf("sending hello: %w", err)
 	}

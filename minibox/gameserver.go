@@ -21,7 +21,7 @@ import (
 	"context"
 
 	"github.com/pangbox/server/database/accounts"
-	"github.com/pangbox/server/game"
+	gameserver "github.com/pangbox/server/game/server"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	"github.com/pangbox/server/pangya/iff"
 	log "github.com/sirupsen/logrus"
@@ -48,7 +48,7 @@ func NewGameServer(ctx context.Context) *GameServer {
 
 func (g *GameServer) Configure(opts GameOptions) error {
 	spawn := func(ctx context.Context, service *Service) {
-		gameServer := game.New(game.Options{
+		gameServer := gameserver.New(gameserver.Options{
 			TopologyClient:  opts.TopologyClient,
 			AccountsService: opts.AccountsService,
 			PangyaIFF:       opts.PangyaIFF,

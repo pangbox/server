@@ -24,10 +24,10 @@ import (
 	"time"
 )
 
-var ErrServiceRunning = errors.New("service is already running")
-var ErrServiceStopped = errors.New("service is already stopped")
-var ErrServiceNotConfigured = errors.New("service is not configured")
-var ErrStopping = errors.New("stopping service")
+var ErrServiceRunning = errors.New("service is already running")      // +checklocksignore
+var ErrServiceStopped = errors.New("service is already stopped")      // +checklocksignore
+var ErrServiceNotConfigured = errors.New("service is not configured") // +checklocksignore
+var ErrStopping = errors.New("stopping service")                      // +checklocksignore
 
 const ShutdownTimeout = 10 * time.Second
 

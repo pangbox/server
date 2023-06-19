@@ -27,7 +27,9 @@ import (
 type BaseHandlerFunc func(*log.Entry, net.Conn) error
 
 type BaseServer struct {
-	mu       sync.RWMutex
+	mu sync.RWMutex
+
+	// +checklocks:mu
 	listener net.Listener
 }
 

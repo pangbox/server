@@ -15,10 +15,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2018-2023 John Chadwick
 // SPDX-License-Identifier: ISC
 
-package game
+package gamepacket
 
 import (
 	"github.com/pangbox/server/common"
+	gamemodel "github.com/pangbox/server/game/model"
 	"github.com/pangbox/server/pangya"
 )
 
@@ -26,28 +27,49 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x0002: &ClientAuth{},
 	0x0003: &ClientMessageSend{},
 	0x0004: &ClientJoinChannel{},
+	0x0006: &ClientGameEnd{},
 	0x0007: &ClientGetUserOnlineStatus{},
 	0x0008: &ClientRoomCreate{},
+	0x0009: &ClientRoomJoin{},
 	0x000A: &ClientRoomEdit{},
 	0x000B: &ClientTutorialStart{},
 	0x000C: &ClientRoomUserEquipmentChange{},
 	0x000D: &ClientPlayerReady{},
 	0x000E: &ClientPlayerStartGame{},
 	0x000F: &ClientRoomLeave{},
+	0x0011: &ClientReadyStartHole{},
+	0x0012: &ClientShotCommit{},
+	0x0013: &ClientShotRotate{},
+	0x0014: &ClientShotMeterInput{},
+	0x0015: &ClientShotPower{},
+	0x0016: &ClientShotClubChange{},
+	0x0017: &ClientShotItemUse{},
+	0x0018: &ClientUserTypingIndicator{},
+	0x0019: &ClientShotCometRelief{},
 	0x001A: &Client001A{},
+	0x001B: &ClientShotSync{},
+	0x001C: &ClientRoomSync{},
 	0x001D: &ClientBuyItem{},
 	0x0020: &ClientEquipmentUpdate{},
+	0x0022: &ClientShotActiveUserAcknowledge{},
+	0x0026: &ClientRoomKick{},
+	0x002D: &ClientRoomInfo{},
 	0x002F: &ClientGetUserData{},
+	0x0030: &ClientPauseGame{},
+	0x0031: &ClientHoleEnd{},
+	0x0032: &ClientSetIdleStatus{},
 	0x0033: &ClientException{},
+	0x0034: &ClientFirstShotReady{},
+	0x0042: &ClientShotArrow{},
 	0x0043: &ClientRequestServerList{},
-	0x0048: &ClientUnknownCounter{},
+	0x0048: &ClientLoadProgress{},
 	0x0063: &ClientRoomLoungeAction{},
 	0x0069: &ClientUserMacrosSet{},
 	0x0081: &ClientMultiplayerJoin{},
 	0x0082: &ClientMultiplayerLeave{},
 	0x0088: &Client0088{},
 	0x008B: &ClientRequestMessengerList{},
-	0x009C: &Client009C{},
+	0x009C: &ClientRequestPlayerHistory{},
 	0x00AE: &ClientTutorialClear{},
 	0x00FE: &Client00FE{},
 	0x0140: &ClientShopJoin{},
@@ -84,27 +106,12 @@ type ClientGetUserOnlineStatus struct {
 	Username common.PString
 }
 
-type SettingsChange struct {
-	Type             byte
-	RoomName         *common.PString `struct-if:"Type == 0"`
-	Password         *common.PString `struct-if:"Type == 1"`
-	RoomType         *byte           `struct-if:"Type == 2"`
-	Course           *byte           `struct-if:"Type == 3"`
-	NumHoles         *uint8          `struct-if:"Type == 4"`
-	HoleProgression  *uint8          `struct-if:"Type == 5"`
-	ShotTimerSeconds *uint8          `struct-if:"Type == 6"`
-	MaxUsers         *uint8          `struct-if:"Type == 7"`
-	GameTimerMinutes *uint8          `struct-if:"Type == 8"`
-	ArtifactID       *uint32         `struct-if:"Type == 13"`
-	NaturalWind      *uint32         `struct-if:"Type == 14"`
-}
-
 // ClientRoomEdit is sent when the client changes room settings.
 type ClientRoomEdit struct {
 	ClientMessage_
 	Unknown    uint16
 	NumChanges uint8 `struct:"sizeof=Changes"`
-	Changes    []SettingsChange
+	Changes    []gamemodel.RoomSettingsChange
 }
 
 // ClientRoomCreate is sent by the client when creating a room.
@@ -123,10 +130,23 @@ type ClientRoomCreate struct {
 	Unknown3    [4]byte
 }
 
+// ClientRoomJoin is sent by the client when joining a room.
+type ClientRoomJoin struct {
+	ClientMessage_
+	RoomNumber   int16
+	RoomPassword common.PString
+}
+
 // ClientJoinChannel is a message sent when the client joins a channel.
 type ClientJoinChannel struct {
 	ClientMessage_
 	ChannelID byte
+}
+
+// ClientGameEnd contains information after the end of a game.
+type ClientGameEnd struct {
+	ClientMessage_
+	// TODO
 }
 
 // ClientTutorialStart is sent when starting a tutorial.
@@ -157,15 +177,85 @@ type ClientPlayerStartGame struct {
 type ClientRoomLeave struct {
 	ClientMessage_
 	Unknown    byte
-	RoomNumber uint16
+	RoomNumber int16
 	Unknown2   uint32
 	Unknown3   uint32
 	Unknown4   uint32
 	Unknown5   uint32
 }
 
+type ClientReadyStartHole struct {
+	ClientMessage_
+}
+
+type ClientShotCommit struct {
+	ClientMessage_
+	UnknownFlag      bool    `struct:"uint16"`
+	Unknown          [9]byte `struct-if:"UnknownFlag"`
+	ShotStrength     float32
+	ShotAccuracy     float32
+	ShotEnglishCurve float32
+	ShotEnglishSpin  float32
+	Unknown2         [30]byte
+	Unknown3         [4]float32
+}
+
+type ClientShotRotate struct {
+	ClientMessage_
+	Angle float32
+}
+
+type ClientShotMeterInput struct {
+	ClientMessage_
+	Sequence uint8
+	Value    float32
+}
+
+type ClientShotPower struct {
+	ClientMessage_
+	Level uint8
+}
+
+type ClientShotClubChange struct {
+	ClientMessage_
+	Club uint8
+}
+
+type ClientShotItemUse struct {
+	ClientMessage_
+	ItemTypeID uint32
+}
+
+type ClientUserTypingIndicator struct {
+	ClientMessage_
+	Status int16 // 1 = started, -1 = stopped
+}
+
+type ClientShotCometRelief struct {
+	ClientMessage_
+	X, Y, Z float32
+}
+
 type Client001A struct {
 	ClientMessage_
+}
+
+type SyncEntry struct {
+	Unknown1 uint8
+	Unknown2 uint32
+}
+
+type ClientShotSync struct {
+	ClientMessage_
+	Data    gamemodel.ShotSyncData
+	Unknown [16]byte
+}
+
+type ClientRoomSync struct {
+	ClientMessage_
+	Unknown1   uint8
+	EntryCount uint8
+	Entries    []SyncEntry
 }
 
 type PurchaseItem struct {
@@ -186,9 +276,70 @@ type ClientBuyItem struct {
 	Items    []PurchaseItem
 }
 
-// ClientEquipmentUpdate
+type UpdateCaddie struct {
+	CaddieID uint32
+}
+
+type UpdateConsumables struct {
+	ItemTypeID [10]uint32
+}
+
+type UpdateComet struct {
+	ItemTypeID uint32
+}
+
+type UpdateDecoration struct {
+	BackgroundTypeID uint32
+	FrameTypeID      uint32
+	StickerTypeID    uint32
+	SlotTypeID       uint32
+	CutInTypeID      uint32
+	TitleTypeID      uint32
+}
+
+type UpdateCharacter struct {
+	CharacterID uint32
+}
+
+type UpdateUnknown1 struct {
+	Unknown uint32
+}
+
+type UpdateUnknown2 struct {
+	CharacterID uint32
+	Unknown     [4]uint32
+}
+
+// ClientEquipmentUpdate updates the user's equipment.
 type ClientEquipmentUpdate struct {
 	ClientMessage_
+	Type        uint8
+	Caddie      *UpdateCaddie      `struct-if:"Type == 1"`
+	Consumables *UpdateConsumables `struct-if:"Type == 2"`
+	Comet       *UpdateComet       `struct-if:"Type == 3"`
+	Decoration  *UpdateDecoration  `struct-if:"Type == 4"`
+	Character   *UpdateCharacter   `struct-if:"Type == 5"`
+	Unknown1    *UpdateUnknown1    `struct-if:"Type == 8"`
+	Unknown2    *UpdateUnknown2    `struct-if:"Type == 9"`
+}
+
+type ClientShotActiveUserAcknowledge struct {
+	ClientMessage_
+}
+
+type ClientRoomKick struct {
+	ClientMessage_
+	ConnID uint32
+}
+
+type ClientRoomInfo struct {
+	ClientMessage_
+	RoomNumber uint16
+}
+
+type ClientShotArrow struct {
+	ClientMessage_
+	// TODO
 }
 
 // ClientRequestServerList is a message sent to request the current
@@ -197,32 +348,15 @@ type ClientRequestServerList struct {
 	ClientMessage_
 }
 
-type ClientUnknownCounter struct {
+type ClientLoadProgress struct {
 	ClientMessage_
-	Unknown uint8
-}
-
-type LoungeActionRotation struct {
-	Z float32
-}
-
-type LoungeActionPosition struct {
-	X, Y, Z float32
-}
-
-type LoungeAction struct {
-	ActionType  byte
-	Rotation    *LoungeActionRotation `struct-if:"ActionType == 0"`
-	PositionAbs *LoungeActionRotation `struct-if:"ActionType == 4"`
-	PositionRel *LoungeActionRotation `struct-if:"ActionType == 6"`
-	Emote       *common.PString       `struct-if:"ActionType == 7"`
-	Departure   *uint32               `struct-if:"ActionType == 8"`
+	Progress uint8
 }
 
 // ClientRoomLoungeAction
 type ClientRoomLoungeAction struct {
 	ClientMessage_
-	LoungeAction
+	gamemodel.RoomAction
 }
 
 // ClientRequestMessengerList is a message sent to request the current
@@ -239,6 +373,22 @@ type ClientGetUserData struct {
 	Request byte
 }
 
+type ClientPauseGame struct {
+	ClientMessage_
+	Pause bool `struct:"byte"`
+}
+
+type ClientHoleEnd struct {
+	ClientMessage_
+	// TODO
+}
+
+// ClientSetIdleStatus sets whether or not the client is idle in a room.
+type ClientSetIdleStatus struct {
+	ClientMessage_
+	Idle bool `struct:"byte"`
+}
+
 // ClientException is a message sent when the client encounters an
 // error.
 type ClientException struct {
@@ -247,8 +397,12 @@ type ClientException struct {
 	Message common.PString
 }
 
-// Client009C is an unknown message.
-type Client009C struct {
+type ClientFirstShotReady struct {
+	ClientMessage_
+}
+
+// ClientRequestPlayerHistory is an unknown message.
+type ClientRequestPlayerHistory struct {
 	ClientMessage_
 }
 
