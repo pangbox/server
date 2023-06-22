@@ -70,6 +70,7 @@ func (c *Conn) handleAuth(ctx context.Context) error {
 
 	// TODO: need data modelling
 	c.playerData = pangya.PlayerData{
+		Game: 0xFFFF,
 		UserInfo: pangya.PlayerInfo{
 			Username: c.player.Username,
 			Nickname: c.player.Nickname.String,
@@ -105,7 +106,6 @@ func (c *Conn) handleAuth(ctx context.Context) error {
 		MainData: &gamepacket.PlayerMainData{
 			ClientVersion: common.ToPString("824.00"),
 			ServerVersion: common.ToPString("Pangbox"),
-			Game:          0xFFFF,
 			PlayerData:    c.playerData,
 		},
 	})
