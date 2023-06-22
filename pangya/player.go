@@ -194,6 +194,7 @@ type PlayerMascotData struct {
 }
 
 type PlayerData struct {
+	Game              uint16
 	UserInfo          PlayerInfo
 	PlayerStats       PlayerStats
 	Trophy            [13][3]uint16

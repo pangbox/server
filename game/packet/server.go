@@ -137,7 +137,6 @@ type ServerChannelList struct {
 type PlayerMainData struct {
 	ClientVersion common.PString
 	ServerVersion common.PString
-	Game          uint16
 	PlayerData    pangya.PlayerData
 	Unknown2      [321]byte
 }
