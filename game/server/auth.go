@@ -231,7 +231,7 @@ func (c *Conn) sendServerList(ctx context.Context) error {
 				ChannelName: c.s.channelName,
 				MaxUsers:    200,    // TODO
 				NumUsers:    0,      // TODO
-				Unknown2:    0x0008, // TODO
+				Unknown2:    0x0000, // TODO - flag 0x0008 is rookie mode
 			})
 		}
 		message.Servers = append(message.Servers, entry)
