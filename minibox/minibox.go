@@ -165,6 +165,8 @@ func (server *Server) ConfigureDatabase(opts DataOptions) error {
 		return fmt.Errorf("setting up database: %w", err)
 	}
 
+	db.SetMaxOpenConns(1)
+
 	server.accountsService = accounts.NewService(accounts.Options{
 		Database: db,
 		Hasher:   hash.Bcrypt{},
