@@ -9,10 +9,73 @@ import (
 )
 
 type Character struct {
-	CharacterID     int64
-	PlayerID        int64
-	CharacterTypeID int64
-	CharacterData   []byte
+	CharacterID      int64
+	PlayerID         int64
+	ItemID           int64
+	HairColor        int64
+	Shirt            int64
+	Mastery          int64
+	Part00ItemID     sql.NullInt64
+	Part01ItemID     sql.NullInt64
+	Part02ItemID     sql.NullInt64
+	Part03ItemID     sql.NullInt64
+	Part04ItemID     sql.NullInt64
+	Part05ItemID     sql.NullInt64
+	Part06ItemID     sql.NullInt64
+	Part07ItemID     sql.NullInt64
+	Part08ItemID     sql.NullInt64
+	Part09ItemID     sql.NullInt64
+	Part10ItemID     sql.NullInt64
+	Part11ItemID     sql.NullInt64
+	Part12ItemID     sql.NullInt64
+	Part13ItemID     sql.NullInt64
+	Part14ItemID     sql.NullInt64
+	Part15ItemID     sql.NullInt64
+	Part16ItemID     sql.NullInt64
+	Part17ItemID     sql.NullInt64
+	Part18ItemID     sql.NullInt64
+	Part19ItemID     sql.NullInt64
+	Part20ItemID     sql.NullInt64
+	Part21ItemID     sql.NullInt64
+	Part22ItemID     sql.NullInt64
+	Part23ItemID     sql.NullInt64
+	Part00ItemTypeID int64
+	Part01ItemTypeID int64
+	Part02ItemTypeID int64
+	Part03ItemTypeID int64
+	Part04ItemTypeID int64
+	Part05ItemTypeID int64
+	Part06ItemTypeID int64
+	Part07ItemTypeID int64
+	Part08ItemTypeID int64
+	Part09ItemTypeID int64
+	Part10ItemTypeID int64
+	Part11ItemTypeID int64
+	Part12ItemTypeID int64
+	Part13ItemTypeID int64
+	Part14ItemTypeID int64
+	Part15ItemTypeID int64
+	Part16ItemTypeID int64
+	Part17ItemTypeID int64
+	Part18ItemTypeID int64
+	Part19ItemTypeID int64
+	Part20ItemTypeID int64
+	Part21ItemTypeID int64
+	Part22ItemTypeID int64
+	Part23ItemTypeID int64
+	AuxPart0ID       sql.NullInt64
+	AuxPart1ID       sql.NullInt64
+	AuxPart2ID       sql.NullInt64
+	AuxPart3ID       sql.NullInt64
+	AuxPart4ID       sql.NullInt64
+	CutInID          sql.NullInt64
+}
+
+type Inventory struct {
+	ItemID     int64
+	PlayerID   int64
+	ItemTypeID int64
+	Quantity   sql.NullInt64
 }
 
 type Player struct {
@@ -21,7 +84,31 @@ type Player struct {
 	Nickname     sql.NullString
 	PasswordHash string
 	Pang         int64
+	Points       int64
 	Rank         int64
+	BallTypeID   int64
+	MascotTypeID int64
+	Slot0TypeID  int64
+	Slot1TypeID  int64
+	Slot2TypeID  int64
+	Slot3TypeID  int64
+	Slot4TypeID  int64
+	Slot5TypeID  int64
+	Slot6TypeID  int64
+	Slot7TypeID  int64
+	Slot8TypeID  int64
+	Slot9TypeID  int64
+	CaddieID     sql.NullInt64
+	ClubID       sql.NullInt64
+	BackgroundID sql.NullInt64
+	FrameID      sql.NullInt64
+	StickerID    sql.NullInt64
+	SlotID       sql.NullInt64
+	CutInID      sql.NullInt64
+	TitleID      sql.NullInt64
+	Poster0ID    sql.NullInt64
+	Poster1ID    sql.NullInt64
+	CharacterID  sql.NullInt64
 }
 
 type Session struct {

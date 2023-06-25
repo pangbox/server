@@ -198,6 +198,15 @@ type RoomGameShotSync struct {
 	Data   gamemodel.ShotSyncData
 }
 
+type RoomGameHoleInfo struct {
+	roomEvent
+	Par  uint8
+	TeeX float32
+	TeeZ float32
+	PinX float32
+	PinZ float32
+}
+
 type ChatMessage struct {
 	lobbyEvent
 	roomEvent

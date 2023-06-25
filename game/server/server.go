@@ -25,6 +25,7 @@ import (
 	"github.com/pangbox/server/database/accounts"
 	gamepacket "github.com/pangbox/server/game/packet"
 	"github.com/pangbox/server/game/room"
+	"github.com/pangbox/server/gameconfig"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	"github.com/pangbox/server/pangya/iff"
 	log "github.com/sirupsen/logrus"
@@ -37,6 +38,7 @@ type Options struct {
 	PangyaIFF       *iff.Archive
 	ServerID        uint32
 	ChannelName     string
+	ConfigProvider  gameconfig.Provider
 }
 
 // Server provides an implementation of the PangYa game server.
@@ -47,6 +49,7 @@ type Server struct {
 	pangyaIFF       *iff.Archive
 	serverID        uint32
 	channelName     string
+	configProvider  gameconfig.Provider
 	lobby           *room.Lobby
 	logger          *log.Entry
 }
@@ -61,6 +64,7 @@ func New(opts Options) *Server {
 		pangyaIFF:       opts.PangyaIFF,
 		serverID:        opts.ServerID,
 		channelName:     opts.ChannelName,
+		configProvider:  opts.ConfigProvider,
 		logger:          logger,
 	}
 }

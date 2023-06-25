@@ -27,7 +27,7 @@ type ServerConn = common.ServerConn[ClientMessage, ServerMessage]
 
 var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x0040: &ServerEvent{},
-	0x0044: &ServerUserData{},
+	0x0044: &ServerPlayerData{},
 	0x0046: &ServerUserCensus{},
 	0x0047: &ServerRoomList{},
 	0x0048: &ServerRoomCensus{},
@@ -50,7 +50,11 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x0064: &ServerRoomShotSync{},
 	0x0065: &ServerRoomFinishHole{},
 	0x0066: &ServerRoomFinishGame{},
+	0x0068: &ServerPurchaseItemResponse{},
+	0x006B: &ServerPlayerEquipmentUpdated{},
 	0x0070: &ServerCharData{},
+	0x0072: &ServerPlayerEquipment{},
+	0x0073: &ServerPlayerInventory{},
 	0x0076: &ServerGameInit{},
 	0x0077: &Server0077{},
 	0x0078: &ServerPlayerReady{},
@@ -58,6 +62,7 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x0090: &ServerPlayerFirstShotReady{},
 	0x0092: &ServerOpponentQuit{},
 	0x0095: &ServerMoneyUpdate{},
+	0x0096: &ServerPointsBalance{},
 	0x009E: &ServerRoomSetWeather{},
 	0x009F: &ServerChannelList{},
 	0x00A1: &ServerUserInfo{},
@@ -70,10 +75,16 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x00F6: &ServerMultiplayerLeft{},
 	0x010E: &ServerPlayerHistory{},
 	0x011F: &ServerTutorialStatus{},
+	0x012B: &ServerMyRoomEntered{},
+	0x012D: &ServerMyRoomLayout{},
 	0x0151: &Server0151{},
 	0x0158: &ServerPlayerStats{},
+	0x0168: &ServerPlayerInfo{},
 	0x016A: &Server016A{},
+	0x016C: &ServerLockerCombinationResponse{},
+	0x0170: &ServerLockerInventoryResponse{},
 	0x01F6: &Server01F6{},
+	0x020E: &Server020E{},
 	0x0210: &ServerInboxNotify{},
 	0x0211: &ServerInboxList{},
 	0x0212: &ServerMailMessage{},
@@ -142,11 +153,60 @@ type PlayerMainData struct {
 	Unknown2      [321]byte
 }
 
-// ServerUserData contains important state information.
-type ServerUserData struct {
+// ServerPlayerData contains important state information.
+type ServerPlayerData struct {
 	ServerMessage_
 	SubType  byte
 	MainData *PlayerMainData `struct-if:"SubType == 0"`
+}
+
+type CaddieUpdated struct {
+	CaddieID uint32
+}
+
+type ConsumablesUpdated struct {
+	ItemTypeID [10]uint32
+}
+
+type CometUpdated struct {
+	ItemID     uint32
+	ItemTypeID uint32
+}
+
+type DecorationUpdated struct {
+	BackgroundTypeID uint32
+	FrameTypeID      uint32
+	StickerTypeID    uint32
+	SlotTypeID       uint32
+	CutInTypeID      uint32
+	TitleTypeID      uint32
+}
+
+type CharacterUpdated struct {
+	CharacterID uint32
+}
+
+type EquipmentUpdateType uint8
+
+const (
+	UpdatedCharParts   EquipmentUpdateType = 0
+	UpdatedCaddie      EquipmentUpdateType = 1
+	UpdatedConsumables EquipmentUpdateType = 2
+	UpdatedComet       EquipmentUpdateType = 3
+	UpdatedDecoration  EquipmentUpdateType = 4
+	UpdatedCharacter   EquipmentUpdateType = 5
+)
+
+type ServerPlayerEquipmentUpdated struct {
+	ServerMessage_
+	Status      uint8
+	Type        uint8
+	CharParts   *pangya.PlayerCharacterData `struct-if:"Type == 0"`
+	Caddie      *CaddieUpdated              `struct-if:"Type == 1"`
+	Consumables *ConsumablesUpdated         `struct-if:"Type == 2"`
+	Comet       *CometUpdated               `struct-if:"Type == 3"`
+	Decoration  *DecorationUpdated          `struct-if:"Type == 4"`
+	Character   *CharacterUpdated           `struct-if:"Type == 5"`
 }
 
 // ServerCharData contains the user's characters.
@@ -155,6 +215,32 @@ type ServerCharData struct {
 	Count1     uint16 `struct:"sizeof=Characters"`
 	Count2     uint16 `struct:"sizeof=Characters"`
 	Characters []pangya.PlayerCharacterData
+}
+
+type ServerPlayerEquipment struct {
+	ServerMessage_
+	Equipment pangya.PlayerEquipment
+}
+
+type InventoryItem struct {
+	ItemID          uint32
+	ItemTypeID      uint32
+	Unknown         int32
+	Quantity        uint32
+	Unknown2        [7]byte
+	Flags           byte
+	RentalDateStart uint32
+	Unknown3        uint32
+	RentalDateEnd   uint32
+	Unknown4        uint32
+	Unknown5        [156]byte
+}
+
+type ServerPlayerInventory struct {
+	ServerMessage_
+	Remaining uint16
+	Count     uint16 `struct:"sizeof=Inventory"`
+	Inventory []InventoryItem
 }
 
 type GamePlayer struct {
@@ -323,6 +409,7 @@ type ServerRoomCensus struct {
 type RoomCensusListSet struct {
 	PlayerCount uint8 `struct:"sizeof=PlayerList"`
 	PlayerList  []gamemodel.RoomPlayerEntry
+	Unknown     byte
 }
 
 type RoomCensusListAdd struct {
@@ -484,10 +571,28 @@ type ServerRoomFinishGame struct {
 	Results    []PlayerGameResult `struct:"sizefrom=NumPlayers"`
 }
 
+type ServerPurchaseItemResponse struct {
+	ServerMessage_
+	Status uint32
+	Pang   uint64
+	Points uint64
+}
+
 type Server016A struct {
 	ServerMessage_
 	Unknown  byte
 	Unknown2 uint32
+}
+
+type ServerLockerCombinationResponse struct {
+	ServerMessage_
+	Status uint32
+}
+
+type ServerLockerInventoryResponse struct {
+	ServerMessage_
+	Unknown uint32
+	Status  uint32
 }
 
 // ServerRoomJoin is sent when a room is joined.
@@ -546,6 +651,11 @@ type ServerMoneyUpdate struct {
 	PangBalance   *UpdatePangBalanceData   `struct-if:"Type == 273"`
 }
 
+type ServerPointsBalance struct {
+	ServerMessage_
+	Points uint64
+}
+
 type ServerRoomSetWeather struct {
 	ServerMessage_
 	Weather uint16
@@ -584,6 +694,27 @@ type ServerTutorialStatus struct {
 	Unknown [6]byte
 }
 
+type ServerMyRoomEntered struct {
+	ServerMessage_
+	Unknown  uint32
+	UserID   uint32
+	Unknown2 uint32
+	Unknown3 [99]byte
+}
+
+type FurnitureItem struct {
+	Unknown  uint32
+	ItemID   uint32
+	Unknown2 [19]byte
+}
+
+type ServerMyRoomLayout struct {
+	ServerMessage_
+	Unknown        uint32
+	FurnitureCount uint16
+	Furniture      []FurnitureItem
+}
+
 type Server0151 struct {
 	ServerMessage_
 	Unknown []byte
@@ -597,9 +728,19 @@ type ServerPlayerStats struct {
 	Stats     pangya.PlayerStats
 }
 
+type ServerPlayerInfo struct {
+	ServerMessage_
+	Player gamemodel.RoomPlayerEntry
+}
+
 type Server01F6 struct {
 	ServerMessage_
 	Unknown []byte
+}
+
+type Server020E struct {
+	ServerMessage_
+	Unknown [8]byte
 }
 
 // ServerInboxNotify is unimplemented.

@@ -26,21 +26,18 @@ import (
 	"github.com/pangbox/server/database/accounts"
 	"github.com/pangbox/server/gen/dbmodels"
 	"github.com/pangbox/server/gen/proto/go/topologypb"
-	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
-	"github.com/pangbox/server/pangya"
 )
 
 // Conn holds the state for a connection to the server.
 type Conn struct {
 	*common.ServerConn[ClientMessage, ServerMessage]
-	topologyClient  topologypbconnect.TopologyServiceClient
-	accountsService *accounts.Service
+	s *Server
 }
 
 // GetServerList returns a server list using the topology store.
 func (c *Conn) GetServerList(ctx context.Context, typ topologypb.Server_Type) (*ServerList, error) {
 	message := &ServerList{}
-	response, err := c.topologyClient.ListServers(ctx, connect.NewRequest(&topologypb.ListServersRequest{Type: typ}))
+	response, err := c.s.topologyClient.ListServers(ctx, connect.NewRequest(&topologypb.ListServersRequest{Type: typ}))
 	if err != nil {
 		return nil, fmt.Errorf("getting server list: %w", err)
 	}
@@ -86,7 +83,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 	var player dbmodels.Player
 	switch t := msg.(type) {
 	case *ClientLogin:
-		player, err = c.accountsService.Authenticate(ctx, t.Username.Value, t.Password.Value)
+		player, err = c.s.accountsService.Authenticate(ctx, t.Username.Value, t.Password.Value)
 	default:
 		return fmt.Errorf("expected ClientLogin, got %T", t)
 	}
@@ -127,7 +124,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 					Nickname: t.Nickname,
 				})
 			case *ClientSetNickname:
-				player, err = c.accountsService.SetNickname(ctx, player.PlayerID, t.Nickname.Value)
+				player, err = c.s.accountsService.SetNickname(ctx, player.PlayerID, t.Nickname.Value)
 				if err != nil {
 					// TODO: need to handle error
 					log.Errorf("Database error setting nickname: %v", err)
@@ -140,7 +137,19 @@ func (c *Conn) Handle(ctx context.Context) error {
 		}
 	}
 
-	haveCharacters, err := c.accountsService.HasCharacters(ctx, player.PlayerID)
+	if !player.ClubID.Valid {
+		item, err := c.s.accountsService.AddClubSet(ctx, player.PlayerID, c.s.configProvider.GetDefaultClubSetTypeID())
+		if err != nil {
+			return fmt.Errorf("creating default clubset: %w", err)
+		}
+
+		err = c.s.accountsService.SetClubSet(ctx, player.PlayerID, item.ItemID)
+		if err != nil {
+			return fmt.Errorf("assigning default clubset: %w", err)
+		}
+	}
+
+	haveCharacters, err := c.s.accountsService.HasCharacters(ctx, player.PlayerID)
 	if err != nil {
 		log.Errorf("Database error getting characters: %v", err)
 		return nil
@@ -161,10 +170,19 @@ func (c *Conn) Handle(ctx context.Context) error {
 
 			switch t := msg.(type) {
 			case *ClientSelectCharacter:
-				c.accountsService.AddCharacter(ctx, player.PlayerID, pangya.PlayerCharacterData{
-					CharTypeID: t.CharacterID,
-					HairColor:  t.HairColor,
+				defaults := c.s.configProvider.GetCharacterDefaults(uint8(t.CharacterID))
+				dbchar, err := c.s.accountsService.AddCharacter(ctx, player.PlayerID, accounts.NewCharacterParams{
+					CharTypeID:         t.CharacterID,
+					HairColor:          t.HairColor,
+					DefaultPartTypeIDs: defaults.DefaultPartTypeIDs,
 				})
+				if err != nil {
+					return fmt.Errorf("creating character: %w", err)
+				}
+				err = c.s.accountsService.SetCharacter(ctx, player.PlayerID, dbchar.CharacterID)
+				if err != nil {
+					return fmt.Errorf("setting new character: %w", err)
+				}
 				c.SendMessage(ctx, &Server0011{})
 				break CharacterSetup
 			default:
@@ -173,7 +191,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 		}
 	}
 
-	session, err := c.accountsService.AddSession(ctx, player.PlayerID, c.RemoteAddr().String())
+	session, err := c.s.accountsService.AddSession(ctx, player.PlayerID, c.RemoteAddr().String())
 	if err != nil {
 		log.Errorf("Error creating session in DB: %v", err)
 	}

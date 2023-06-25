@@ -66,9 +66,11 @@ func (b *BaseServer) Listen(logger *log.Entry, addr string, handler BaseHandlerF
 					logger.WithField("error", r).Error("PANIC in connection")
 				}
 				logger.Info("Exiting connection thread.")
+				if err := socket.Close(); err != nil {
+					logger.WithError(err).Warning("error closing socket")
+				}
 			}()
-			err := handler(logger, socket)
-			if err != nil {
+			if err := handler(logger, socket); err != nil {
 				logger.WithError(err).Error("ERROR in connection")
 			}
 		}()

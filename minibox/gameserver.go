@@ -22,6 +22,7 @@ import (
 
 	"github.com/pangbox/server/database/accounts"
 	gameserver "github.com/pangbox/server/game/server"
+	"github.com/pangbox/server/gameconfig"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	"github.com/pangbox/server/pangya/iff"
 	log "github.com/sirupsen/logrus"
@@ -54,6 +55,7 @@ func (g *GameServer) Configure(opts GameOptions) error {
 			PangyaIFF:       opts.PangyaIFF,
 			ServerID:        opts.ServerID,
 			ChannelName:     opts.ChannelName,
+			ConfigProvider:  gameconfig.Default(),
 		})
 
 		service.SetShutdownFunc(func(shutdownCtx context.Context) error {

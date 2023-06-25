@@ -7,73 +7,510 @@ package dbmodels
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO character (
     player_id,
-    character_type_id,
-    character_data
+    item_id,
+    hair_color,
+    shirt,
+    mastery,
+    part00_item_type_id,
+    part01_item_type_id,
+    part02_item_type_id,
+    part03_item_type_id,
+    part04_item_type_id,
+    part05_item_type_id,
+    part06_item_type_id,
+    part07_item_type_id,
+    part08_item_type_id,
+    part09_item_type_id,
+    part10_item_type_id,
+    part11_item_type_id,
+    part12_item_type_id,
+    part13_item_type_id,
+    part14_item_type_id,
+    part15_item_type_id,
+    part16_item_type_id,
+    part17_item_type_id,
+    part18_item_type_id,
+    part19_item_type_id,
+    part20_item_type_id,
+    part21_item_type_id,
+    part22_item_type_id,
+    part23_item_type_id
 ) VALUES (
-    ?, ?, ?
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
 )
-RETURNING character_id, player_id, character_type_id, character_data
+RETURNING character_id, player_id, item_id, hair_color, shirt, mastery, part00_item_id, part01_item_id, part02_item_id, part03_item_id, part04_item_id, part05_item_id, part06_item_id, part07_item_id, part08_item_id, part09_item_id, part10_item_id, part11_item_id, part12_item_id, part13_item_id, part14_item_id, part15_item_id, part16_item_id, part17_item_id, part18_item_id, part19_item_id, part20_item_id, part21_item_id, part22_item_id, part23_item_id, part00_item_type_id, part01_item_type_id, part02_item_type_id, part03_item_type_id, part04_item_type_id, part05_item_type_id, part06_item_type_id, part07_item_type_id, part08_item_type_id, part09_item_type_id, part10_item_type_id, part11_item_type_id, part12_item_type_id, part13_item_type_id, part14_item_type_id, part15_item_type_id, part16_item_type_id, part17_item_type_id, part18_item_type_id, part19_item_type_id, part20_item_type_id, part21_item_type_id, part22_item_type_id, part23_item_type_id, aux_part0_id, aux_part1_id, aux_part2_id, aux_part3_id, aux_part4_id, cut_in_id
 `
 
 type CreateCharacterParams struct {
-	PlayerID        int64
-	CharacterTypeID int64
-	CharacterData   []byte
+	PlayerID         int64
+	ItemID           int64
+	HairColor        int64
+	Shirt            int64
+	Mastery          int64
+	Part00ItemTypeID int64
+	Part01ItemTypeID int64
+	Part02ItemTypeID int64
+	Part03ItemTypeID int64
+	Part04ItemTypeID int64
+	Part05ItemTypeID int64
+	Part06ItemTypeID int64
+	Part07ItemTypeID int64
+	Part08ItemTypeID int64
+	Part09ItemTypeID int64
+	Part10ItemTypeID int64
+	Part11ItemTypeID int64
+	Part12ItemTypeID int64
+	Part13ItemTypeID int64
+	Part14ItemTypeID int64
+	Part15ItemTypeID int64
+	Part16ItemTypeID int64
+	Part17ItemTypeID int64
+	Part18ItemTypeID int64
+	Part19ItemTypeID int64
+	Part20ItemTypeID int64
+	Part21ItemTypeID int64
+	Part22ItemTypeID int64
+	Part23ItemTypeID int64
 }
 
 func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams) (Character, error) {
-	row := q.db.QueryRowContext(ctx, createCharacter, arg.PlayerID, arg.CharacterTypeID, arg.CharacterData)
+	row := q.db.QueryRowContext(ctx, createCharacter,
+		arg.PlayerID,
+		arg.ItemID,
+		arg.HairColor,
+		arg.Shirt,
+		arg.Mastery,
+		arg.Part00ItemTypeID,
+		arg.Part01ItemTypeID,
+		arg.Part02ItemTypeID,
+		arg.Part03ItemTypeID,
+		arg.Part04ItemTypeID,
+		arg.Part05ItemTypeID,
+		arg.Part06ItemTypeID,
+		arg.Part07ItemTypeID,
+		arg.Part08ItemTypeID,
+		arg.Part09ItemTypeID,
+		arg.Part10ItemTypeID,
+		arg.Part11ItemTypeID,
+		arg.Part12ItemTypeID,
+		arg.Part13ItemTypeID,
+		arg.Part14ItemTypeID,
+		arg.Part15ItemTypeID,
+		arg.Part16ItemTypeID,
+		arg.Part17ItemTypeID,
+		arg.Part18ItemTypeID,
+		arg.Part19ItemTypeID,
+		arg.Part20ItemTypeID,
+		arg.Part21ItemTypeID,
+		arg.Part22ItemTypeID,
+		arg.Part23ItemTypeID,
+	)
 	var i Character
 	err := row.Scan(
 		&i.CharacterID,
 		&i.PlayerID,
-		&i.CharacterTypeID,
-		&i.CharacterData,
+		&i.ItemID,
+		&i.HairColor,
+		&i.Shirt,
+		&i.Mastery,
+		&i.Part00ItemID,
+		&i.Part01ItemID,
+		&i.Part02ItemID,
+		&i.Part03ItemID,
+		&i.Part04ItemID,
+		&i.Part05ItemID,
+		&i.Part06ItemID,
+		&i.Part07ItemID,
+		&i.Part08ItemID,
+		&i.Part09ItemID,
+		&i.Part10ItemID,
+		&i.Part11ItemID,
+		&i.Part12ItemID,
+		&i.Part13ItemID,
+		&i.Part14ItemID,
+		&i.Part15ItemID,
+		&i.Part16ItemID,
+		&i.Part17ItemID,
+		&i.Part18ItemID,
+		&i.Part19ItemID,
+		&i.Part20ItemID,
+		&i.Part21ItemID,
+		&i.Part22ItemID,
+		&i.Part23ItemID,
+		&i.Part00ItemTypeID,
+		&i.Part01ItemTypeID,
+		&i.Part02ItemTypeID,
+		&i.Part03ItemTypeID,
+		&i.Part04ItemTypeID,
+		&i.Part05ItemTypeID,
+		&i.Part06ItemTypeID,
+		&i.Part07ItemTypeID,
+		&i.Part08ItemTypeID,
+		&i.Part09ItemTypeID,
+		&i.Part10ItemTypeID,
+		&i.Part11ItemTypeID,
+		&i.Part12ItemTypeID,
+		&i.Part13ItemTypeID,
+		&i.Part14ItemTypeID,
+		&i.Part15ItemTypeID,
+		&i.Part16ItemTypeID,
+		&i.Part17ItemTypeID,
+		&i.Part18ItemTypeID,
+		&i.Part19ItemTypeID,
+		&i.Part20ItemTypeID,
+		&i.Part21ItemTypeID,
+		&i.Part22ItemTypeID,
+		&i.Part23ItemTypeID,
+		&i.AuxPart0ID,
+		&i.AuxPart1ID,
+		&i.AuxPart2ID,
+		&i.AuxPart3ID,
+		&i.AuxPart4ID,
+		&i.CutInID,
 	)
 	return i, err
 }
 
 const getCharacter = `-- name: GetCharacter :one
-SELECT character_id, player_id, character_type_id, character_data FROM character
-WHERE character_id = ? LIMIT 1
+SELECT
+    character.character_id, character.player_id, character.item_id, character.hair_color, character.shirt, character.mastery, character.part00_item_id, character.part01_item_id, character.part02_item_id, character.part03_item_id, character.part04_item_id, character.part05_item_id, character.part06_item_id, character.part07_item_id, character.part08_item_id, character.part09_item_id, character.part10_item_id, character.part11_item_id, character.part12_item_id, character.part13_item_id, character.part14_item_id, character.part15_item_id, character.part16_item_id, character.part17_item_id, character.part18_item_id, character.part19_item_id, character.part20_item_id, character.part21_item_id, character.part22_item_id, character.part23_item_id, character.part00_item_type_id, character.part01_item_type_id, character.part02_item_type_id, character.part03_item_type_id, character.part04_item_type_id, character.part05_item_type_id, character.part06_item_type_id, character.part07_item_type_id, character.part08_item_type_id, character.part09_item_type_id, character.part10_item_type_id, character.part11_item_type_id, character.part12_item_type_id, character.part13_item_type_id, character.part14_item_type_id, character.part15_item_type_id, character.part16_item_type_id, character.part17_item_type_id, character.part18_item_type_id, character.part19_item_type_id, character.part20_item_type_id, character.part21_item_type_id, character.part22_item_type_id, character.part23_item_type_id, character.aux_part0_id, character.aux_part1_id, character.aux_part2_id, character.aux_part3_id, character.aux_part4_id, character.cut_in_id,
+    inventory_character.item_type_id AS character_type_id,
+    inventory_aux_part0.item_type_id AS inventory_aux_part0_type_id_FIXNULL,
+    inventory_aux_part1.item_type_id AS inventory_aux_part1_type_id_FIXNULL,
+    inventory_aux_part2.item_type_id AS inventory_aux_part2_type_id_FIXNULL,
+    inventory_aux_part3.item_type_id AS inventory_aux_part3_type_id_FIXNULL,
+    inventory_aux_part4.item_type_id AS inventory_aux_part4_type_id_FIXNULL
+FROM character AS character
+LEFT JOIN inventory AS inventory_character ON (character.item_id = inventory_character.item_id)
+LEFT JOIN inventory AS inventory_aux_part0 ON (character.aux_part0_id = inventory_aux_part0.item_id)
+LEFT JOIN inventory AS inventory_aux_part1 ON (character.aux_part1_id = inventory_aux_part1.item_id)
+LEFT JOIN inventory AS inventory_aux_part2 ON (character.aux_part2_id = inventory_aux_part2.item_id)
+LEFT JOIN inventory AS inventory_aux_part3 ON (character.aux_part3_id = inventory_aux_part3.item_id)
+LEFT JOIN inventory AS inventory_aux_part4 ON (character.aux_part4_id = inventory_aux_part4.item_id)
+WHERE character.character_id = ? LIMIT 1
 `
 
-func (q *Queries) GetCharacter(ctx context.Context, characterID int64) (Character, error) {
+type GetCharacterRow struct {
+	CharacterID                    int64
+	PlayerID                       int64
+	ItemID                         int64
+	HairColor                      int64
+	Shirt                          int64
+	Mastery                        int64
+	Part00ItemID                   sql.NullInt64
+	Part01ItemID                   sql.NullInt64
+	Part02ItemID                   sql.NullInt64
+	Part03ItemID                   sql.NullInt64
+	Part04ItemID                   sql.NullInt64
+	Part05ItemID                   sql.NullInt64
+	Part06ItemID                   sql.NullInt64
+	Part07ItemID                   sql.NullInt64
+	Part08ItemID                   sql.NullInt64
+	Part09ItemID                   sql.NullInt64
+	Part10ItemID                   sql.NullInt64
+	Part11ItemID                   sql.NullInt64
+	Part12ItemID                   sql.NullInt64
+	Part13ItemID                   sql.NullInt64
+	Part14ItemID                   sql.NullInt64
+	Part15ItemID                   sql.NullInt64
+	Part16ItemID                   sql.NullInt64
+	Part17ItemID                   sql.NullInt64
+	Part18ItemID                   sql.NullInt64
+	Part19ItemID                   sql.NullInt64
+	Part20ItemID                   sql.NullInt64
+	Part21ItemID                   sql.NullInt64
+	Part22ItemID                   sql.NullInt64
+	Part23ItemID                   sql.NullInt64
+	Part00ItemTypeID               int64
+	Part01ItemTypeID               int64
+	Part02ItemTypeID               int64
+	Part03ItemTypeID               int64
+	Part04ItemTypeID               int64
+	Part05ItemTypeID               int64
+	Part06ItemTypeID               int64
+	Part07ItemTypeID               int64
+	Part08ItemTypeID               int64
+	Part09ItemTypeID               int64
+	Part10ItemTypeID               int64
+	Part11ItemTypeID               int64
+	Part12ItemTypeID               int64
+	Part13ItemTypeID               int64
+	Part14ItemTypeID               int64
+	Part15ItemTypeID               int64
+	Part16ItemTypeID               int64
+	Part17ItemTypeID               int64
+	Part18ItemTypeID               int64
+	Part19ItemTypeID               int64
+	Part20ItemTypeID               int64
+	Part21ItemTypeID               int64
+	Part22ItemTypeID               int64
+	Part23ItemTypeID               int64
+	AuxPart0ID                     sql.NullInt64
+	AuxPart1ID                     sql.NullInt64
+	AuxPart2ID                     sql.NullInt64
+	AuxPart3ID                     sql.NullInt64
+	AuxPart4ID                     sql.NullInt64
+	CutInID                        sql.NullInt64
+	CharacterTypeID                int64
+	InventoryAuxPart0TypeIDFIXNULL int64
+	InventoryAuxPart1TypeIDFIXNULL int64
+	InventoryAuxPart2TypeIDFIXNULL int64
+	InventoryAuxPart3TypeIDFIXNULL int64
+	InventoryAuxPart4TypeIDFIXNULL int64
+}
+
+func (q *Queries) GetCharacter(ctx context.Context, characterID int64) (GetCharacterRow, error) {
 	row := q.db.QueryRowContext(ctx, getCharacter, characterID)
-	var i Character
+	var i GetCharacterRow
 	err := row.Scan(
 		&i.CharacterID,
 		&i.PlayerID,
+		&i.ItemID,
+		&i.HairColor,
+		&i.Shirt,
+		&i.Mastery,
+		&i.Part00ItemID,
+		&i.Part01ItemID,
+		&i.Part02ItemID,
+		&i.Part03ItemID,
+		&i.Part04ItemID,
+		&i.Part05ItemID,
+		&i.Part06ItemID,
+		&i.Part07ItemID,
+		&i.Part08ItemID,
+		&i.Part09ItemID,
+		&i.Part10ItemID,
+		&i.Part11ItemID,
+		&i.Part12ItemID,
+		&i.Part13ItemID,
+		&i.Part14ItemID,
+		&i.Part15ItemID,
+		&i.Part16ItemID,
+		&i.Part17ItemID,
+		&i.Part18ItemID,
+		&i.Part19ItemID,
+		&i.Part20ItemID,
+		&i.Part21ItemID,
+		&i.Part22ItemID,
+		&i.Part23ItemID,
+		&i.Part00ItemTypeID,
+		&i.Part01ItemTypeID,
+		&i.Part02ItemTypeID,
+		&i.Part03ItemTypeID,
+		&i.Part04ItemTypeID,
+		&i.Part05ItemTypeID,
+		&i.Part06ItemTypeID,
+		&i.Part07ItemTypeID,
+		&i.Part08ItemTypeID,
+		&i.Part09ItemTypeID,
+		&i.Part10ItemTypeID,
+		&i.Part11ItemTypeID,
+		&i.Part12ItemTypeID,
+		&i.Part13ItemTypeID,
+		&i.Part14ItemTypeID,
+		&i.Part15ItemTypeID,
+		&i.Part16ItemTypeID,
+		&i.Part17ItemTypeID,
+		&i.Part18ItemTypeID,
+		&i.Part19ItemTypeID,
+		&i.Part20ItemTypeID,
+		&i.Part21ItemTypeID,
+		&i.Part22ItemTypeID,
+		&i.Part23ItemTypeID,
+		&i.AuxPart0ID,
+		&i.AuxPart1ID,
+		&i.AuxPart2ID,
+		&i.AuxPart3ID,
+		&i.AuxPart4ID,
+		&i.CutInID,
 		&i.CharacterTypeID,
-		&i.CharacterData,
+		&i.InventoryAuxPart0TypeIDFIXNULL,
+		&i.InventoryAuxPart1TypeIDFIXNULL,
+		&i.InventoryAuxPart2TypeIDFIXNULL,
+		&i.InventoryAuxPart3TypeIDFIXNULL,
+		&i.InventoryAuxPart4TypeIDFIXNULL,
 	)
 	return i, err
 }
 
 const getCharactersByPlayer = `-- name: GetCharactersByPlayer :many
-SELECT character_id, player_id, character_type_id, character_data FROM character
-WHERE player_id = ?
+SELECT
+    character.character_id, character.player_id, character.item_id, character.hair_color, character.shirt, character.mastery, character.part00_item_id, character.part01_item_id, character.part02_item_id, character.part03_item_id, character.part04_item_id, character.part05_item_id, character.part06_item_id, character.part07_item_id, character.part08_item_id, character.part09_item_id, character.part10_item_id, character.part11_item_id, character.part12_item_id, character.part13_item_id, character.part14_item_id, character.part15_item_id, character.part16_item_id, character.part17_item_id, character.part18_item_id, character.part19_item_id, character.part20_item_id, character.part21_item_id, character.part22_item_id, character.part23_item_id, character.part00_item_type_id, character.part01_item_type_id, character.part02_item_type_id, character.part03_item_type_id, character.part04_item_type_id, character.part05_item_type_id, character.part06_item_type_id, character.part07_item_type_id, character.part08_item_type_id, character.part09_item_type_id, character.part10_item_type_id, character.part11_item_type_id, character.part12_item_type_id, character.part13_item_type_id, character.part14_item_type_id, character.part15_item_type_id, character.part16_item_type_id, character.part17_item_type_id, character.part18_item_type_id, character.part19_item_type_id, character.part20_item_type_id, character.part21_item_type_id, character.part22_item_type_id, character.part23_item_type_id, character.aux_part0_id, character.aux_part1_id, character.aux_part2_id, character.aux_part3_id, character.aux_part4_id, character.cut_in_id,
+    inventory_character.item_type_id AS character_type_id
+FROM character AS character
+LEFT JOIN inventory AS inventory_character ON (character.item_id = inventory_character.item_id)
+WHERE character.player_id = ?
 `
 
-func (q *Queries) GetCharactersByPlayer(ctx context.Context, playerID int64) ([]Character, error) {
+type GetCharactersByPlayerRow struct {
+	CharacterID      int64
+	PlayerID         int64
+	ItemID           int64
+	HairColor        int64
+	Shirt            int64
+	Mastery          int64
+	Part00ItemID     sql.NullInt64
+	Part01ItemID     sql.NullInt64
+	Part02ItemID     sql.NullInt64
+	Part03ItemID     sql.NullInt64
+	Part04ItemID     sql.NullInt64
+	Part05ItemID     sql.NullInt64
+	Part06ItemID     sql.NullInt64
+	Part07ItemID     sql.NullInt64
+	Part08ItemID     sql.NullInt64
+	Part09ItemID     sql.NullInt64
+	Part10ItemID     sql.NullInt64
+	Part11ItemID     sql.NullInt64
+	Part12ItemID     sql.NullInt64
+	Part13ItemID     sql.NullInt64
+	Part14ItemID     sql.NullInt64
+	Part15ItemID     sql.NullInt64
+	Part16ItemID     sql.NullInt64
+	Part17ItemID     sql.NullInt64
+	Part18ItemID     sql.NullInt64
+	Part19ItemID     sql.NullInt64
+	Part20ItemID     sql.NullInt64
+	Part21ItemID     sql.NullInt64
+	Part22ItemID     sql.NullInt64
+	Part23ItemID     sql.NullInt64
+	Part00ItemTypeID int64
+	Part01ItemTypeID int64
+	Part02ItemTypeID int64
+	Part03ItemTypeID int64
+	Part04ItemTypeID int64
+	Part05ItemTypeID int64
+	Part06ItemTypeID int64
+	Part07ItemTypeID int64
+	Part08ItemTypeID int64
+	Part09ItemTypeID int64
+	Part10ItemTypeID int64
+	Part11ItemTypeID int64
+	Part12ItemTypeID int64
+	Part13ItemTypeID int64
+	Part14ItemTypeID int64
+	Part15ItemTypeID int64
+	Part16ItemTypeID int64
+	Part17ItemTypeID int64
+	Part18ItemTypeID int64
+	Part19ItemTypeID int64
+	Part20ItemTypeID int64
+	Part21ItemTypeID int64
+	Part22ItemTypeID int64
+	Part23ItemTypeID int64
+	AuxPart0ID       sql.NullInt64
+	AuxPart1ID       sql.NullInt64
+	AuxPart2ID       sql.NullInt64
+	AuxPart3ID       sql.NullInt64
+	AuxPart4ID       sql.NullInt64
+	CutInID          sql.NullInt64
+	CharacterTypeID  int64
+}
+
+func (q *Queries) GetCharactersByPlayer(ctx context.Context, playerID int64) ([]GetCharactersByPlayerRow, error) {
 	rows, err := q.db.QueryContext(ctx, getCharactersByPlayer, playerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Character
+	var items []GetCharactersByPlayerRow
 	for rows.Next() {
-		var i Character
+		var i GetCharactersByPlayerRow
 		if err := rows.Scan(
 			&i.CharacterID,
 			&i.PlayerID,
+			&i.ItemID,
+			&i.HairColor,
+			&i.Shirt,
+			&i.Mastery,
+			&i.Part00ItemID,
+			&i.Part01ItemID,
+			&i.Part02ItemID,
+			&i.Part03ItemID,
+			&i.Part04ItemID,
+			&i.Part05ItemID,
+			&i.Part06ItemID,
+			&i.Part07ItemID,
+			&i.Part08ItemID,
+			&i.Part09ItemID,
+			&i.Part10ItemID,
+			&i.Part11ItemID,
+			&i.Part12ItemID,
+			&i.Part13ItemID,
+			&i.Part14ItemID,
+			&i.Part15ItemID,
+			&i.Part16ItemID,
+			&i.Part17ItemID,
+			&i.Part18ItemID,
+			&i.Part19ItemID,
+			&i.Part20ItemID,
+			&i.Part21ItemID,
+			&i.Part22ItemID,
+			&i.Part23ItemID,
+			&i.Part00ItemTypeID,
+			&i.Part01ItemTypeID,
+			&i.Part02ItemTypeID,
+			&i.Part03ItemTypeID,
+			&i.Part04ItemTypeID,
+			&i.Part05ItemTypeID,
+			&i.Part06ItemTypeID,
+			&i.Part07ItemTypeID,
+			&i.Part08ItemTypeID,
+			&i.Part09ItemTypeID,
+			&i.Part10ItemTypeID,
+			&i.Part11ItemTypeID,
+			&i.Part12ItemTypeID,
+			&i.Part13ItemTypeID,
+			&i.Part14ItemTypeID,
+			&i.Part15ItemTypeID,
+			&i.Part16ItemTypeID,
+			&i.Part17ItemTypeID,
+			&i.Part18ItemTypeID,
+			&i.Part19ItemTypeID,
+			&i.Part20ItemTypeID,
+			&i.Part21ItemTypeID,
+			&i.Part22ItemTypeID,
+			&i.Part23ItemTypeID,
+			&i.AuxPart0ID,
+			&i.AuxPart1ID,
+			&i.AuxPart2ID,
+			&i.AuxPart3ID,
+			&i.AuxPart4ID,
+			&i.CutInID,
 			&i.CharacterTypeID,
-			&i.CharacterData,
 		); err != nil {
 			return nil, err
 		}
@@ -90,7 +527,7 @@ func (q *Queries) GetCharactersByPlayer(ctx context.Context, playerID int64) ([]
 
 const playerHasCharacters = `-- name: PlayerHasCharacters :one
 SELECT count(*) > 0 FROM character
-WHERE player_id = ?
+WHERE character.player_id = ?
 `
 
 func (q *Queries) PlayerHasCharacters(ctx context.Context, playerID int64) (bool, error) {
@@ -98,4 +535,232 @@ func (q *Queries) PlayerHasCharacters(ctx context.Context, playerID int64) (bool
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const setCharacterParts = `-- name: SetCharacterParts :one
+UPDATE character
+SET
+    part00_item_id = ?,
+    part01_item_id = ?,
+    part02_item_id = ?,
+    part03_item_id = ?,
+    part04_item_id = ?,
+    part05_item_id = ?,
+    part06_item_id = ?,
+    part07_item_id = ?,
+    part08_item_id = ?,
+    part09_item_id = ?,
+    part10_item_id = ?,
+    part11_item_id = ?,
+    part12_item_id = ?,
+    part13_item_id = ?,
+    part14_item_id = ?,
+    part15_item_id = ?,
+    part16_item_id = ?,
+    part17_item_id = ?,
+    part18_item_id = ?,
+    part19_item_id = ?,
+    part20_item_id = ?,
+    part21_item_id = ?,
+    part22_item_id = ?,
+    part23_item_id = ?,
+    part00_item_type_id = ?,
+    part01_item_type_id = ?,
+    part02_item_type_id = ?,
+    part03_item_type_id = ?,
+    part04_item_type_id = ?,
+    part05_item_type_id = ?,
+    part06_item_type_id = ?,
+    part07_item_type_id = ?,
+    part08_item_type_id = ?,
+    part09_item_type_id = ?,
+    part10_item_type_id = ?,
+    part11_item_type_id = ?,
+    part12_item_type_id = ?,
+    part13_item_type_id = ?,
+    part14_item_type_id = ?,
+    part15_item_type_id = ?,
+    part16_item_type_id = ?,
+    part17_item_type_id = ?,
+    part18_item_type_id = ?,
+    part19_item_type_id = ?,
+    part20_item_type_id = ?,
+    part21_item_type_id = ?,
+    part22_item_type_id = ?,
+    part23_item_type_id = ?,
+    cut_in_id = ?
+WHERE character_id = ?
+RETURNING character_id, player_id, item_id, hair_color, shirt, mastery, part00_item_id, part01_item_id, part02_item_id, part03_item_id, part04_item_id, part05_item_id, part06_item_id, part07_item_id, part08_item_id, part09_item_id, part10_item_id, part11_item_id, part12_item_id, part13_item_id, part14_item_id, part15_item_id, part16_item_id, part17_item_id, part18_item_id, part19_item_id, part20_item_id, part21_item_id, part22_item_id, part23_item_id, part00_item_type_id, part01_item_type_id, part02_item_type_id, part03_item_type_id, part04_item_type_id, part05_item_type_id, part06_item_type_id, part07_item_type_id, part08_item_type_id, part09_item_type_id, part10_item_type_id, part11_item_type_id, part12_item_type_id, part13_item_type_id, part14_item_type_id, part15_item_type_id, part16_item_type_id, part17_item_type_id, part18_item_type_id, part19_item_type_id, part20_item_type_id, part21_item_type_id, part22_item_type_id, part23_item_type_id, aux_part0_id, aux_part1_id, aux_part2_id, aux_part3_id, aux_part4_id, cut_in_id
+`
+
+type SetCharacterPartsParams struct {
+	Part00ItemID     sql.NullInt64
+	Part01ItemID     sql.NullInt64
+	Part02ItemID     sql.NullInt64
+	Part03ItemID     sql.NullInt64
+	Part04ItemID     sql.NullInt64
+	Part05ItemID     sql.NullInt64
+	Part06ItemID     sql.NullInt64
+	Part07ItemID     sql.NullInt64
+	Part08ItemID     sql.NullInt64
+	Part09ItemID     sql.NullInt64
+	Part10ItemID     sql.NullInt64
+	Part11ItemID     sql.NullInt64
+	Part12ItemID     sql.NullInt64
+	Part13ItemID     sql.NullInt64
+	Part14ItemID     sql.NullInt64
+	Part15ItemID     sql.NullInt64
+	Part16ItemID     sql.NullInt64
+	Part17ItemID     sql.NullInt64
+	Part18ItemID     sql.NullInt64
+	Part19ItemID     sql.NullInt64
+	Part20ItemID     sql.NullInt64
+	Part21ItemID     sql.NullInt64
+	Part22ItemID     sql.NullInt64
+	Part23ItemID     sql.NullInt64
+	Part00ItemTypeID int64
+	Part01ItemTypeID int64
+	Part02ItemTypeID int64
+	Part03ItemTypeID int64
+	Part04ItemTypeID int64
+	Part05ItemTypeID int64
+	Part06ItemTypeID int64
+	Part07ItemTypeID int64
+	Part08ItemTypeID int64
+	Part09ItemTypeID int64
+	Part10ItemTypeID int64
+	Part11ItemTypeID int64
+	Part12ItemTypeID int64
+	Part13ItemTypeID int64
+	Part14ItemTypeID int64
+	Part15ItemTypeID int64
+	Part16ItemTypeID int64
+	Part17ItemTypeID int64
+	Part18ItemTypeID int64
+	Part19ItemTypeID int64
+	Part20ItemTypeID int64
+	Part21ItemTypeID int64
+	Part22ItemTypeID int64
+	Part23ItemTypeID int64
+	CutInID          sql.NullInt64
+	CharacterID      int64
+}
+
+func (q *Queries) SetCharacterParts(ctx context.Context, arg SetCharacterPartsParams) (Character, error) {
+	row := q.db.QueryRowContext(ctx, setCharacterParts,
+		arg.Part00ItemID,
+		arg.Part01ItemID,
+		arg.Part02ItemID,
+		arg.Part03ItemID,
+		arg.Part04ItemID,
+		arg.Part05ItemID,
+		arg.Part06ItemID,
+		arg.Part07ItemID,
+		arg.Part08ItemID,
+		arg.Part09ItemID,
+		arg.Part10ItemID,
+		arg.Part11ItemID,
+		arg.Part12ItemID,
+		arg.Part13ItemID,
+		arg.Part14ItemID,
+		arg.Part15ItemID,
+		arg.Part16ItemID,
+		arg.Part17ItemID,
+		arg.Part18ItemID,
+		arg.Part19ItemID,
+		arg.Part20ItemID,
+		arg.Part21ItemID,
+		arg.Part22ItemID,
+		arg.Part23ItemID,
+		arg.Part00ItemTypeID,
+		arg.Part01ItemTypeID,
+		arg.Part02ItemTypeID,
+		arg.Part03ItemTypeID,
+		arg.Part04ItemTypeID,
+		arg.Part05ItemTypeID,
+		arg.Part06ItemTypeID,
+		arg.Part07ItemTypeID,
+		arg.Part08ItemTypeID,
+		arg.Part09ItemTypeID,
+		arg.Part10ItemTypeID,
+		arg.Part11ItemTypeID,
+		arg.Part12ItemTypeID,
+		arg.Part13ItemTypeID,
+		arg.Part14ItemTypeID,
+		arg.Part15ItemTypeID,
+		arg.Part16ItemTypeID,
+		arg.Part17ItemTypeID,
+		arg.Part18ItemTypeID,
+		arg.Part19ItemTypeID,
+		arg.Part20ItemTypeID,
+		arg.Part21ItemTypeID,
+		arg.Part22ItemTypeID,
+		arg.Part23ItemTypeID,
+		arg.CutInID,
+		arg.CharacterID,
+	)
+	var i Character
+	err := row.Scan(
+		&i.CharacterID,
+		&i.PlayerID,
+		&i.ItemID,
+		&i.HairColor,
+		&i.Shirt,
+		&i.Mastery,
+		&i.Part00ItemID,
+		&i.Part01ItemID,
+		&i.Part02ItemID,
+		&i.Part03ItemID,
+		&i.Part04ItemID,
+		&i.Part05ItemID,
+		&i.Part06ItemID,
+		&i.Part07ItemID,
+		&i.Part08ItemID,
+		&i.Part09ItemID,
+		&i.Part10ItemID,
+		&i.Part11ItemID,
+		&i.Part12ItemID,
+		&i.Part13ItemID,
+		&i.Part14ItemID,
+		&i.Part15ItemID,
+		&i.Part16ItemID,
+		&i.Part17ItemID,
+		&i.Part18ItemID,
+		&i.Part19ItemID,
+		&i.Part20ItemID,
+		&i.Part21ItemID,
+		&i.Part22ItemID,
+		&i.Part23ItemID,
+		&i.Part00ItemTypeID,
+		&i.Part01ItemTypeID,
+		&i.Part02ItemTypeID,
+		&i.Part03ItemTypeID,
+		&i.Part04ItemTypeID,
+		&i.Part05ItemTypeID,
+		&i.Part06ItemTypeID,
+		&i.Part07ItemTypeID,
+		&i.Part08ItemTypeID,
+		&i.Part09ItemTypeID,
+		&i.Part10ItemTypeID,
+		&i.Part11ItemTypeID,
+		&i.Part12ItemTypeID,
+		&i.Part13ItemTypeID,
+		&i.Part14ItemTypeID,
+		&i.Part15ItemTypeID,
+		&i.Part16ItemTypeID,
+		&i.Part17ItemTypeID,
+		&i.Part18ItemTypeID,
+		&i.Part19ItemTypeID,
+		&i.Part20ItemTypeID,
+		&i.Part21ItemTypeID,
+		&i.Part22ItemTypeID,
+		&i.Part23ItemTypeID,
+		&i.AuxPart0ID,
+		&i.AuxPart1ID,
+		&i.AuxPart2ID,
+		&i.AuxPart3ID,
+		&i.AuxPart4ID,
+		&i.CutInID,
+	)
+	return i, err
 }

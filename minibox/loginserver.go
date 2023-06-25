@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/pangbox/server/database/accounts"
+	"github.com/pangbox/server/gameconfig"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	"github.com/pangbox/server/login"
 	log "github.com/sirupsen/logrus"
@@ -47,6 +48,7 @@ func (l *LoginServer) Configure(opts LoginOptions) error {
 		loginServer := login.New(login.Options{
 			TopologyClient:  opts.TopologyClient,
 			AccountsService: opts.AccountsService,
+			ConfigProvider:  gameconfig.Default(),
 		})
 
 		service.SetShutdownFunc(func(shutdownCtx context.Context) error {

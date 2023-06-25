@@ -104,12 +104,12 @@ type PlayerEquipment struct {
 
 	Items PlayerEquippedItems
 
-	BackgroundID     uint32
-	FrameID          uint32
-	StickerID        uint32
-	SlotID           uint32
-	SlotCutInID      uint32
-	SlotRankBannerID uint32
+	BackgroundID uint32
+	FrameID      uint32
+	StickerID    uint32
+	SlotID       uint32
+	CutInID      uint32
+	TitleID      uint32
 
 	BackgroundTypeID uint32
 	FrameTypeID      uint32
@@ -160,7 +160,6 @@ type PlayerCharacterData struct {
 	CutInID     uint32
 	Unknown4    [16]byte
 	Stats       [5]byte
-	Mastery     int
 	CardChar    [4]uint32
 	CardCaddie  [4]uint32
 	CardNPC     [4]uint32
@@ -197,7 +196,7 @@ type PlayerData struct {
 	UserInfo          PlayerInfo
 	PlayerStats       PlayerStats
 	Trophy            [13][3]uint16
-	Items             PlayerEquipment
+	EquippedItems     PlayerEquipment
 	SeasonHistory     PlayerSeasonHistory
 	EquippedCharacter PlayerCharacterData
 	EquippedCaddie    PlayerCaddieData

@@ -26,20 +26,63 @@ import (
 	gamepacket "github.com/pangbox/server/game/packet"
 	"github.com/pangbox/server/gen/proto/go/topologypb"
 	"github.com/pangbox/server/pangya"
-	log "github.com/sirupsen/logrus"
 )
 
 func (c *Conn) handleAuth(ctx context.Context) error {
-	err := c.SendHello(&gamepacket.ConnectMessage{
-		Unknown: [8]byte{0x00, 0x06, 0x00, 0x00, 0x3f, 0x00, 0x01, 0x01},
-	})
-	if err != nil {
+	if err := c.sendHello(ctx); err != nil {
 		return fmt.Errorf("sending hello message: %w", err)
 	}
 
+	if err := c.waitForSessionAuth(ctx); err != nil {
+		return fmt.Errorf("waiting for session auth: %w", err)
+	}
+
+	if err := c.fetchPlayer(ctx); err != nil {
+		return fmt.Errorf("fetching player from db: %w", err)
+	}
+
+	if err := c.fetchCharacters(ctx); err != nil {
+		return fmt.Errorf("fetching characters from db: %w", err)
+	}
+
+	if err := c.sendPlayerData(ctx); err != nil {
+		return fmt.Errorf("sending player data to client: %w", err)
+	}
+
+	if err := c.sendCharacterData(ctx); err != nil {
+		return fmt.Errorf("sending character data to client: %w", err)
+	}
+
+	if err := c.sendAchievementProgress(ctx); err != nil {
+		return fmt.Errorf("sending achievemtn progress to client: %w", err)
+	}
+
+	if err := c.sendInventory(ctx); err != nil {
+		return fmt.Errorf("sending inventory to client: %w", err)
+	}
+
+	if err := c.SendMessage(ctx, &gamepacket.ServerMessageConnect{}); err != nil {
+		return fmt.Errorf("sending message server connect message: %w", err)
+	}
+
+	if err := c.sendServerList(ctx); err != nil {
+		return fmt.Errorf("sending server list: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Conn) sendHello(ctx context.Context) error {
+	// TODO: remove hardcoded bytes
+	return c.SendHello(&gamepacket.ConnectMessage{
+		Unknown: [8]byte{0x00, 0x06, 0x00, 0x00, 0x3f, 0x00, 0x01, 0x01},
+	})
+}
+
+func (c *Conn) waitForSessionAuth(ctx context.Context) error {
 	msg, err := c.ReadMessage()
 	if err != nil {
-		return fmt.Errorf("reading handshake: %w", err)
+		return fmt.Errorf("reading message: %w", err)
 	}
 
 	switch t := msg.(type) {
@@ -47,83 +90,119 @@ func (c *Conn) handleAuth(ctx context.Context) error {
 		c.session, err = c.s.accountsService.GetSessionByKey(ctx, t.LoginKey.Value)
 		if err != nil {
 			// TODO: error handling
-			return nil
+			return err
 		}
-		c.player, err = c.s.accountsService.GetPlayer(ctx, c.session.PlayerID)
-		if err != nil {
-			// TODO: error handling
-			return nil
-		}
-		log.Debugf("Client auth: %#v", msg)
+		c.connID = uint32(c.session.SessionID)
 
 	default:
 		return fmt.Errorf("expected client auth, got %T", t)
 	}
+	return nil
+}
 
+func (c *Conn) fetchPlayer(ctx context.Context) error {
+	var err error
+	c.player, err = c.s.accountsService.GetPlayer(ctx, c.session.PlayerID)
+	if err != nil {
+		// TODO: error handling
+		return err
+	}
+	return nil
+}
+
+func (c *Conn) refreshCurrentCharacter() {
+	for _, character := range c.characters {
+		if character.ID == uint32(c.player.CharacterID.Int64) {
+			c.currentCharacter = &character
+			return
+		}
+	}
+	if len(c.characters) > 0 {
+		c.currentCharacter = &c.characters[0]
+		return
+	} else {
+		c.currentCharacter = nil
+	}
+}
+
+func (c *Conn) fetchCharacters(ctx context.Context) error {
+	var err error
 	c.characters, err = c.s.accountsService.GetCharacters(ctx, c.session.PlayerID)
 	if err != nil {
 		// TODO: handle error for client
 		return fmt.Errorf("database error: %w", err)
 	}
+	c.refreshCurrentCharacter()
 
-	c.connID = uint32(c.session.SessionID)
+	return nil
+}
 
-	// TODO: need data modelling
-	c.playerData = pangya.PlayerData{
-		UserInfo: pangya.PlayerInfo{
-			Username: c.player.Username,
-			Nickname: c.player.Nickname.String,
-			PlayerID: uint32(c.player.PlayerID),
-			ConnID:   c.connID,
-		},
-		PlayerStats: pangya.PlayerStats{
-			Pang: uint64(c.player.Pang),
-		},
-		Items: pangya.PlayerEquipment{
-			CaddieID:    0,
-			CharacterID: c.characters[0].ID,
-			ClubSetID:   0x1754,
-			CometTypeID: 0x14000000,
-			Items: pangya.PlayerEquippedItems{
-				ItemIDs: [10]uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			},
-		},
-		EquippedCharacter: c.characters[0],
-		EquippedClub: pangya.PlayerClubData{
-			Item: pangya.PlayerItem{
-				ID:     0x1754,
-				TypeID: 0x10000000,
-			},
-			Stats: pangya.ClubStats{
-				UpgradeStats: [5]uint16{8, 9, 8, 3, 3},
-			},
-		},
-	}
-
-	c.SendMessage(ctx, &gamepacket.ServerUserData{
+func (c *Conn) sendPlayerData(ctx context.Context) error {
+	return c.SendMessage(ctx, &gamepacket.ServerPlayerData{
 		SubType: 0,
 		MainData: &gamepacket.PlayerMainData{
 			ClientVersion: common.ToPString("824.00"),
 			ServerVersion: common.ToPString("Pangbox"),
 			Game:          0xFFFF,
-			PlayerData:    c.playerData,
+			PlayerData:    c.getPlayerData(),
 		},
 	})
+}
 
-	c.SendMessage(ctx, &gamepacket.ServerCharData{
+func (c *Conn) sendCharacterData(ctx context.Context) error {
+	return c.SendMessage(ctx, &gamepacket.ServerCharData{
 		Count1:     uint16(len(c.characters)),
 		Count2:     uint16(len(c.characters)),
 		Characters: c.characters,
 	})
+}
 
-	c.SendMessage(ctx, &gamepacket.ServerAchievementProgress{
+func (c *Conn) sendAchievementProgress(ctx context.Context) error {
+	return c.SendMessage(ctx, &gamepacket.ServerAchievementProgress{
 		Remaining: 0,
 		Count:     0,
 	})
+}
 
-	c.SendMessage(ctx, &gamepacket.ServerMessageConnect{})
+func (c *Conn) sendInventory(ctx context.Context) error {
+	inventory, err := c.s.accountsService.GetPlayerInventory(ctx, c.session.PlayerID)
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
 
-	c.sendServerList(ctx)
+	for i, l := 0, 50; i < len(inventory); {
+		if l > len(inventory) {
+			l = len(inventory)
+		}
+		inventoryPkt := &gamepacket.ServerPlayerInventory{
+			Remaining: uint16((len(inventory) - i) - l),
+			Count:     uint16(l),
+			Inventory: make([]gamepacket.InventoryItem, l),
+		}
+		for n := i + l; i < n; i++ {
+			inventoryPkt.Inventory[i] = gamepacket.InventoryItem{
+				ItemID:     uint32(inventory[i].ItemID),
+				ItemTypeID: uint32(inventory[i].ItemTypeID),
+				Unknown:    -1,
+				Quantity:   uint32(inventory[i].Quantity.Int64),
+				Unknown5: [156]byte{
+					0x02, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				},
+			}
+		}
+		if err := c.SendMessage(ctx, inventoryPkt); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

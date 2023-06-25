@@ -26,6 +26,7 @@ import (
 	"github.com/pangbox/server/database"
 	"github.com/pangbox/server/database/accounts"
 	gameserver "github.com/pangbox/server/game/server"
+	"github.com/pangbox/server/gameconfig"
 	log "github.com/sirupsen/logrus"
 	"github.com/xo/dburl"
 )
@@ -72,6 +73,7 @@ func main() {
 			Database: db,
 			Hasher:   hash.Bcrypt{},
 		}),
+		ConfigProvider: gameconfig.Default(),
 	})
 	log.Fatalln(gameServer.Listen(ctx, listenAddr))
 }

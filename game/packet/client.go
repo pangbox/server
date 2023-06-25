@@ -46,7 +46,7 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x0017: &ClientShotItemUse{},
 	0x0018: &ClientUserTypingIndicator{},
 	0x0019: &ClientShotCometRelief{},
-	0x001A: &Client001A{},
+	0x001A: &ClientHoleInfo{},
 	0x001B: &ClientShotSync{},
 	0x001C: &ClientRoomSync{},
 	0x001D: &ClientBuyItem{},
@@ -71,6 +71,11 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x008B: &ClientRequestMessengerList{},
 	0x009C: &ClientRequestPlayerHistory{},
 	0x00AE: &ClientTutorialClear{},
+	0x00B5: &ClientEnterMyRoom{},
+	0x00B7: &ClientRequestInventory{},
+	0x00C1: &Client00C1{},
+	0x00CC: &ClientLockerCombinationAttempt{},
+	0x00D3: &ClientLockerInventoryRequest{},
 	0x00FE: &Client00FE{},
 	0x0140: &ClientShopJoin{},
 	0x0143: &ClientRequestInboxList{},
@@ -236,8 +241,14 @@ type ClientShotCometRelief struct {
 	X, Y, Z float32
 }
 
-type Client001A struct {
+type ClientHoleInfo struct {
 	ClientMessage_
+	Num        uint8
+	Unknown1   uint32
+	Unknown2   uint32
+	Par        uint8
+	TeeX, TeeZ float32
+	PinX, PinZ float32
 }
 
 type SyncEntry struct {
@@ -259,13 +270,13 @@ type ClientRoomSync struct {
 }
 
 type PurchaseItem struct {
-	Unknown        uint32
-	ItemID         uint32
-	Unknown2       uint16
-	Unknown3       uint16
-	Quantity       uint32
-	ItemCostPang   uint32
-	ItemCostCookie uint32
+	Unknown       uint32
+	ItemTypeID    uint32
+	Unknown2      uint16
+	Unknown3      uint16
+	Quantity      uint32
+	ItemCostPang  uint32
+	ItemCostPoint uint32
 }
 
 // ClientBuyItem is sent by the client to buy an item from the shop.
@@ -314,13 +325,14 @@ type UpdateUnknown2 struct {
 type ClientEquipmentUpdate struct {
 	ClientMessage_
 	Type        uint8
-	Caddie      *UpdateCaddie      `struct-if:"Type == 1"`
-	Consumables *UpdateConsumables `struct-if:"Type == 2"`
-	Comet       *UpdateComet       `struct-if:"Type == 3"`
-	Decoration  *UpdateDecoration  `struct-if:"Type == 4"`
-	Character   *UpdateCharacter   `struct-if:"Type == 5"`
-	Unknown1    *UpdateUnknown1    `struct-if:"Type == 8"`
-	Unknown2    *UpdateUnknown2    `struct-if:"Type == 9"`
+	CharParts   *pangya.PlayerCharacterData `struct-if:"Type == 0"`
+	Caddie      *UpdateCaddie               `struct-if:"Type == 1"`
+	Consumables *UpdateConsumables          `struct-if:"Type == 2"`
+	Comet       *UpdateComet                `struct-if:"Type == 3"`
+	Decoration  *UpdateDecoration           `struct-if:"Type == 4"`
+	Character   *UpdateCharacter            `struct-if:"Type == 5"`
+	Unknown1    *UpdateUnknown1             `struct-if:"Type == 8"`
+	Unknown2    *UpdateUnknown2             `struct-if:"Type == 9"`
 }
 
 type ClientShotActiveUserAcknowledge struct {
@@ -411,6 +423,18 @@ type ClientTutorialClear struct {
 	ClientMessage_
 }
 
+type ClientEnterMyRoom struct {
+	ClientMessage_
+	UserID     uint32
+	RoomUserID uint32
+}
+
+type ClientRequestInventory struct {
+	ClientMessage_
+	UserID  uint32
+	Unknown byte
+}
+
 // ClientShopJoin is an unknown message.
 type ClientShopJoin struct {
 	ClientMessage_
@@ -467,6 +491,20 @@ type ClientRequestInboxMessage struct {
 // ClientRequestDailyReward is the message sent to request the daily
 // reward.
 type ClientRequestDailyReward struct {
+	ClientMessage_
+}
+
+type Client00C1 struct {
+	ClientMessage_
+	Unknown byte
+}
+
+type ClientLockerCombinationAttempt struct {
+	ClientMessage_
+	Combination common.PString
+}
+
+type ClientLockerInventoryRequest struct {
 	ClientMessage_
 }
 

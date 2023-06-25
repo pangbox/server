@@ -23,6 +23,7 @@ import (
 
 	"github.com/pangbox/server/common"
 	"github.com/pangbox/server/database/accounts"
+	"github.com/pangbox/server/gameconfig"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	log "github.com/sirupsen/logrus"
 )
@@ -31,6 +32,7 @@ import (
 type Options struct {
 	TopologyClient  topologypbconnect.TopologyServiceClient
 	AccountsService *accounts.Service
+	ConfigProvider  gameconfig.Provider
 }
 
 // Server provides an implementation of the PangYa login server.
@@ -38,6 +40,7 @@ type Server struct {
 	topologyClient  topologypbconnect.TopologyServiceClient
 	accountsService *accounts.Service
 	baseServer      *common.BaseServer
+	configProvider  gameconfig.Provider
 }
 
 // New creates a new instance of the login server.
@@ -46,6 +49,7 @@ func New(opts Options) *Server {
 		topologyClient:  opts.TopologyClient,
 		accountsService: opts.AccountsService,
 		baseServer:      &common.BaseServer{},
+		configProvider:  opts.ConfigProvider,
 	}
 }
 
@@ -60,8 +64,7 @@ func (s *Server) Listen(ctx context.Context, addr string) error {
 				ClientMessageTable,
 				ServerMessageTable,
 			),
-			topologyClient:  s.topologyClient,
-			accountsService: s.accountsService,
+			s: s,
 		}
 		return conn.Handle(ctx)
 	})

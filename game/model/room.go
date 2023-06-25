@@ -53,25 +53,24 @@ type RoomPlayerEntry struct {
 	SlotRankBannerID  uint32
 	StatusFlags       RoomStatusFlag
 	Rank              uint8
-	UnknownPadding    [3]byte
-	Unknown           uint8
-	Unknown2          uint16
+	Unknown           uint16
 	GuildID           uint32
 	GuildEmblemImage  string `struct:"[12]byte"`
-	GuildEmblemID     uint8
 	PlayerID          uint32
+	Unknown2          uint32
+	Unknown3          uint8 // <-- suspect, this may not be in the right place
 	LoungeState       uint32
-	Unknown3          uint16
-	Unknown4          uint32
+	Unknown4          uint16
 	X                 float32
 	Y                 float32
 	Z                 float32
 	Angle             float32
+	Unknown5          uint32
 	ShopUnknown       uint32
 	ShopName          string `struct:"[64]byte"`
 	MascotTypeID      uint32
 	GlobalID          string `struct:"[22]byte"`
-	Unknown5          [106]byte
+	Unknown6          [106]byte
 	Guest             bool `struct:"byte"`
 	AverageScore      float32
 	CharacterData     pangya.PlayerCharacterData

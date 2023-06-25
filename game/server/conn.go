@@ -19,9 +19,11 @@ package gameserver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/pangbox/server/common"
+	"github.com/pangbox/server/database/accounts"
 	gamemodel "github.com/pangbox/server/game/model"
 	gamepacket "github.com/pangbox/server/game/packet"
 	"github.com/pangbox/server/game/room"
@@ -36,9 +38,10 @@ type Conn struct {
 
 	connID     uint32
 	session    dbmodels.Session
-	player     dbmodels.Player
-	playerData pangya.PlayerData
+	player     dbmodels.GetPlayerRow
 	characters []pangya.PlayerCharacterData
+
+	currentCharacter *pangya.PlayerCharacterData
 
 	currentLobby *room.Lobby
 	currentRoom  *room.Room
@@ -62,11 +65,11 @@ func (c *Conn) getRoomPlayer() *gamemodel.RoomPlayerEntry {
 		Nickname:         c.player.Nickname.String,
 		Rank:             uint8(c.player.Rank),
 		GuildName:        "",
-		CharTypeID:       c.playerData.EquippedCharacter.CharTypeID,
+		CharTypeID:       c.currentCharacter.CharTypeID,
 		StatusFlags:      0,
 		GuildEmblemImage: "guildmark", // TODO
 		PlayerID:         uint32(c.player.PlayerID),
-		CharacterData:    c.playerData.EquippedCharacter,
+		CharacterData:    c.getPlayerEquippedCharacter(),
 	}
 }
 
@@ -179,7 +182,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 			c.currentRoom.Send(ctx, room.RoomPlayerJoin{
 				Entry:      c.getRoomPlayer(),
 				Conn:       c.ServerConn,
-				PlayerData: c.playerData,
+				PlayerData: c.getPlayerData(),
 			})
 		case *gamepacket.ClientAssistModeToggle:
 			c.SendMessage(ctx, &gamepacket.ServerAssistModeToggled{})
@@ -317,8 +320,6 @@ func (c *Conn) Handle(ctx context.Context) error {
 					Message:        common.ToPString("Welcome to the first Pangbox server release! Not much works yet..."),
 				},
 			})
-		case *gamepacket.Client001A:
-			// Do nothing.
 		case *gamepacket.ClientJoinChannel:
 			c.SendMessage(ctx, &gamepacket.Server004E{Unknown: []byte{0x01}})
 			c.SendMessage(ctx, &gamepacket.Server01F6{Unknown: []byte{0x00, 0x00, 0x00, 0x00}})
@@ -362,10 +363,21 @@ func (c *Conn) Handle(ctx context.Context) error {
 				joinRoom.Send(ctx, room.RoomPlayerJoin{
 					Entry:      c.getRoomPlayer(),
 					Conn:       c.ServerConn,
-					PlayerData: c.playerData,
+					PlayerData: c.getPlayerData(),
 				})
 				c.currentRoom = joinRoom
 			}
+		case *gamepacket.ClientHoleInfo:
+			if c.currentRoom == nil {
+				break
+			}
+			c.currentRoom.Send(ctx, room.RoomGameHoleInfo{
+				Par:  t.Par,
+				TeeX: t.TeeX,
+				TeeZ: t.TeeZ,
+				PinX: t.PinX,
+				PinZ: t.PinZ,
+			})
 		case *gamepacket.ClientRoomLeave:
 			if err := c.leaveRoom(ctx); err != nil {
 				// TODO: handle error
@@ -436,18 +448,202 @@ func (c *Conn) Handle(ctx context.Context) error {
 			c.SendMessage(ctx, &gamepacket.ServerTutorialStatus{
 				Unknown: [6]byte{0x00, 0x01, 0x03, 0x00, 0x00, 0x00},
 			})
+		case *gamepacket.ClientEnterMyRoom:
+			if t.UserID != t.RoomUserID {
+				return errors.New("entering another user's myroom is not implemented yet")
+			}
+			c.SendMessage(ctx, &gamepacket.ServerMyRoomEntered{
+				Unknown:  1,
+				UserID:   t.UserID,
+				Unknown2: 1,
+			})
+		case *gamepacket.ClientRequestInventory:
+			if t.UserID != uint32(c.session.PlayerID) {
+				return errors.New("wrong user ID specified in packet")
+			}
+			c.SendMessage(ctx, &gamepacket.ServerMyRoomLayout{
+				Unknown:        1,
+				FurnitureCount: 0,
+			})
+			c.SendMessage(ctx, &gamepacket.ServerPlayerInfo{
+				Player: *c.getRoomPlayer(),
+			})
+		case *gamepacket.ClientLockerCombinationAttempt:
+			// TODO
+			c.SendMessage(ctx, &gamepacket.ServerLockerCombinationResponse{
+				Status: 0,
+			})
+		case *gamepacket.ClientLockerInventoryRequest:
+			// This has something to do with the combination/password system.
+			c.SendMessage(ctx, &gamepacket.ServerLockerInventoryResponse{
+				Status: 76,
+			})
+		case *gamepacket.Client00C1:
+			// Seems to happen when entering my room.
+			log.Debug("TODO: 00C1 (my room?)")
 		case *gamepacket.ClientUserMacrosSet:
 			// TODO: server-side macro storage
 			log.Debugf("Set macros: %+v", t.MacroList)
 		case *gamepacket.ClientEquipmentUpdate:
-			// TODO
-			log.Debug("TODO: 0020")
+			switch {
+			case t.CharParts != nil:
+				if err := c.s.accountsService.SetCharacterParts(
+					ctx,
+					c.player.PlayerID,
+					*t.CharParts,
+				); err != nil {
+					return err
+				}
+				if err := c.fetchPlayer(ctx); err != nil {
+					return err
+				}
+				if err := c.SendMessage(ctx, &gamepacket.ServerPlayerEquipmentUpdated{
+					Status:    0x04,
+					Type:      uint8(gamepacket.UpdatedCharParts),
+					CharParts: c.currentCharacter,
+				}); err != nil {
+					return err
+				}
+
+			case t.Caddie != nil:
+				if err := c.s.accountsService.SetCaddie(ctx, c.player.PlayerID, int64(t.Caddie.CaddieID)); err != nil {
+					return err
+				}
+				if err := c.fetchPlayer(ctx); err != nil {
+					return err
+				}
+				if err := c.SendMessage(ctx, &gamepacket.ServerPlayerEquipmentUpdated{
+					Status: 0x04,
+					Type:   uint8(gamepacket.UpdatedCaddie),
+					Caddie: &gamepacket.CaddieUpdated{
+						CaddieID: t.Caddie.CaddieID,
+					},
+				}); err != nil {
+					return err
+				}
+
+			case t.Consumables != nil:
+				if err := c.s.accountsService.SetConsumables(ctx, c.player.PlayerID, t.Consumables.ItemTypeID, &c.player); err != nil {
+					return err
+				}
+				if err := c.SendMessage(ctx, &gamepacket.ServerPlayerEquipmentUpdated{
+					Status: 0x04,
+					Type:   uint8(gamepacket.UpdatedConsumables),
+					Consumables: &gamepacket.ConsumablesUpdated{
+						ItemTypeID: c.getPlayerEquippedConsumables(),
+					},
+				}); err != nil {
+					return err
+				}
+
+			case t.Comet != nil:
+				cometID, err := c.s.accountsService.SetComet(ctx, c.player.PlayerID, t.Comet.ItemTypeID, &c.player)
+				if err != nil {
+					log.WithError(err).Errorf("attempt to set comet failed")
+				}
+				if err := c.SendMessage(ctx, &gamepacket.ServerPlayerEquipmentUpdated{
+					Status: 0x04,
+					Type:   uint8(gamepacket.UpdatedComet),
+					Comet: &gamepacket.CometUpdated{
+						ItemID:     uint32(cometID),
+						ItemTypeID: uint32(c.player.BallTypeID),
+					},
+				}); err != nil {
+					return err
+				}
+
+			case t.Decoration != nil:
+				if err := c.s.accountsService.SetDecoration(ctx, c.player.PlayerID, accounts.DecorationTypeIDs{
+					BackgroundTypeID: t.Decoration.BackgroundTypeID,
+					FrameTypeID:      t.Decoration.FrameTypeID,
+					StickerTypeID:    t.Decoration.StickerTypeID,
+					SlotTypeID:       t.Decoration.SlotTypeID,
+					CutInTypeID:      t.Decoration.CutInTypeID,
+					TitleTypeID:      t.Decoration.TitleTypeID,
+				}); err != nil {
+					return err
+				}
+				if err := c.fetchPlayer(ctx); err != nil {
+					return err
+				}
+				if err := c.SendMessage(ctx, &gamepacket.ServerPlayerEquipmentUpdated{
+					Status: 0x04,
+					Type:   uint8(gamepacket.UpdatedDecoration),
+					Decoration: &gamepacket.DecorationUpdated{
+						BackgroundTypeID: uint32(c.player.BackgroundTypeID.Int64),
+						FrameTypeID:      uint32(c.player.FrameTypeID.Int64),
+						StickerTypeID:    uint32(c.player.StickerTypeID.Int64),
+						SlotTypeID:       uint32(c.player.SlotTypeID.Int64),
+						CutInTypeID:      uint32(c.player.CutInTypeID.Int64),
+						TitleTypeID:      uint32(c.player.TitleTypeID.Int64),
+					},
+				}); err != nil {
+					return err
+				}
+
+			case t.Character != nil:
+				if err := c.s.accountsService.SetCharacter(ctx, c.player.PlayerID, int64(t.Character.CharacterID)); err != nil {
+					return err
+				}
+				if err := c.fetchPlayer(ctx); err != nil {
+					return err
+				}
+				c.refreshCurrentCharacter()
+				if err := c.SendMessage(ctx, &gamepacket.ServerPlayerEquipmentUpdated{
+					Status:    0x04,
+					Type:      uint8(gamepacket.UpdatedCharParts),
+					CharParts: c.currentCharacter,
+				}); err != nil {
+					return err
+				}
+			}
 		case *gamepacket.Client00FE:
 			// TODO
 			log.Debug("TODO: 00FE")
 		case *gamepacket.ClientShopJoin:
-			// Enter shop, not sure what responses need to go here?
-			log.Debug("TODO: 0140")
+			c.SendMessage(ctx, &gamepacket.Server020E{})
+		case *gamepacket.ClientBuyItem:
+			pangTotal := int64(0)
+			pointTotal := int64(0)
+			for _, item := range t.Items {
+				// TODO: validate with iff
+				pangTotal += int64(item.ItemCostPang)
+				pointTotal += int64(item.ItemCostPoint)
+			}
+			if pangTotal > c.player.Pang || pointTotal > c.player.Points {
+				c.SendMessage(ctx, &gamepacket.ServerPurchaseItemResponse{
+					Status: 1,
+				})
+				continue
+			}
+			newCurrency := dbmodels.SetPlayerCurrencyRow{}
+			for _, item := range t.Items {
+				newCurrency, err = c.s.accountsService.PurchaseItem(ctx, c.session.PlayerID, int64(item.ItemCostPang), int64(item.ItemCostPoint), int64(item.ItemTypeID), int64(item.Quantity))
+				if err != nil {
+					return fmt.Errorf("purchasing item %v: %w", item.ItemTypeID, err)
+				}
+			}
+			if err := c.SendMessage(ctx, &gamepacket.ServerPangPurchaseData{
+				PangsRemaining: uint64(newCurrency.Pang),
+				PangsSpent:     uint64(pangTotal),
+			}); err != nil {
+				return err
+			}
+			if err := c.SendMessage(ctx, &gamepacket.ServerPointsBalance{
+				Points: uint64(newCurrency.Points),
+			}); err != nil {
+				return err
+			}
+			if err := c.SendMessage(ctx, &gamepacket.ServerPurchaseItemResponse{
+				Status: 0,
+				Pang:   uint64(newCurrency.Pang),
+				Points: uint64(newCurrency.Points),
+			}); err != nil {
+				return err
+			}
+			c.sendInventory(ctx)
+			c.fetchCharacters(ctx)
+			c.sendCharacterData(ctx)
 		default:
 			return fmt.Errorf("unexpected message: %T", t)
 		}

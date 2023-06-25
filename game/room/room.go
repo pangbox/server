@@ -234,6 +234,9 @@ func (r *Room) handleEvent(ctx context.Context, t *actor.Task[RoomEvent], msg ac
 	case RoomGameShotSync:
 		return rejectOnError(r.handleRoomGameShotSync(ctx, event))
 
+	case RoomGameHoleInfo:
+		return rejectOnError(r.handleRoomGameHoleInfo(ctx, event))
+
 	case ChatMessage:
 		return rejectOnError(r.handleChatMessage(ctx, event))
 
@@ -570,7 +573,6 @@ func (r *Room) handleRoomGameTurnEnd(ctx context.Context, event RoomGameTurnEnd)
 			if r.state.CurrentHole > r.state.NumHoles {
 				for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
 					// TODO:
-					// - This doesn't work (client hangs)
 					// - Need to actually calculate values for real.
 					r.broadcast(ctx, &gamepacket.ServerEvent{
 						Type: gamepacket.GameEndEvent,
@@ -640,6 +642,11 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 		}
 		r.state.ShotSync = nil
 	}
+	return nil
+}
+
+func (r *Room) handleRoomGameHoleInfo(ctx context.Context, event RoomGameHoleInfo) error {
+	fmt.Printf("%#v\n", event)
 	return nil
 }
 

@@ -17,6 +17,6 @@
 
 package server
 
+//go:generate ./sqlc.sh
 //go:generate go run github.com/bufbuild/buf/cmd/buf generate
-//go:generate go run github.com/kyleconroy/sqlc/cmd/sqlc generate --no-remote
-//go:generate go run github.com/pangbox/server/cmd/minibox/lang/update -src cmd/minibox -out cmd/minibox/lang -locales en,jp
+//go:generate go run github.com/pangbox/server/cmd/minibox/lang/update -src cmd/minibox -out cmd/minibox/lang -locales en,ja

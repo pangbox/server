@@ -18,7 +18,7 @@ INSERT INTO player (
 ) VALUES (
     ?, ?, ?
 )
-RETURNING player_id, username, nickname, password_hash, pang, rank
+RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
 `
 
 type CreatePlayerParams struct {
@@ -36,33 +36,284 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (Pla
 		&i.Nickname,
 		&i.PasswordHash,
 		&i.Pang,
+		&i.Points,
 		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
 	)
 	return i, err
 }
 
 const getPlayer = `-- name: GetPlayer :one
-SELECT player_id, username, nickname, password_hash, pang, rank FROM player
-WHERE player_id = ? LIMIT 1
+SELECT
+    player.player_id, player.username, player.nickname, player.password_hash, player.pang, player.points, player.rank, player.ball_type_id, player.mascot_type_id, player.slot0_type_id, player.slot1_type_id, player.slot2_type_id, player.slot3_type_id, player.slot4_type_id, player.slot5_type_id, player.slot6_type_id, player.slot7_type_id, player.slot8_type_id, player.slot9_type_id, player.caddie_id, player.club_id, player.background_id, player.frame_id, player.sticker_id, player.slot_id, player.cut_in_id, player.title_id, player.poster0_id, player.poster1_id, player.character_id,
+    character.character_id, character.player_id, character.item_id, character.hair_color, character.shirt, character.mastery, character.part00_item_id, character.part01_item_id, character.part02_item_id, character.part03_item_id, character.part04_item_id, character.part05_item_id, character.part06_item_id, character.part07_item_id, character.part08_item_id, character.part09_item_id, character.part10_item_id, character.part11_item_id, character.part12_item_id, character.part13_item_id, character.part14_item_id, character.part15_item_id, character.part16_item_id, character.part17_item_id, character.part18_item_id, character.part19_item_id, character.part20_item_id, character.part21_item_id, character.part22_item_id, character.part23_item_id, character.part00_item_type_id, character.part01_item_type_id, character.part02_item_type_id, character.part03_item_type_id, character.part04_item_type_id, character.part05_item_type_id, character.part06_item_type_id, character.part07_item_type_id, character.part08_item_type_id, character.part09_item_type_id, character.part10_item_type_id, character.part11_item_type_id, character.part12_item_type_id, character.part13_item_type_id, character.part14_item_type_id, character.part15_item_type_id, character.part16_item_type_id, character.part17_item_type_id, character.part18_item_type_id, character.part19_item_type_id, character.part20_item_type_id, character.part21_item_type_id, character.part22_item_type_id, character.part23_item_type_id, character.aux_part0_id, character.aux_part1_id, character.aux_part2_id, character.aux_part3_id, character.aux_part4_id, character.cut_in_id,
+    inventory_character.item_type_id  AS character_type_id_,
+    inventory_caddie.item_type_id     AS caddie_type_id_,
+    inventory_club.item_type_id       AS club_type_id_,
+    inventory_background.item_type_id AS background_type_id_,
+    inventory_frame.item_type_id      AS frame_type_id_,
+    inventory_sticker.item_type_id    AS sticker_type_id_,
+    inventory_slot.item_type_id       AS slot_type_id_,
+    inventory_cut_in.item_type_id     AS cut_in_type_id_,
+    inventory_title.item_type_id      AS title_type_id_,
+    inventory_poster0.item_type_id    AS poster0_type_id_,
+    inventory_poster1.item_type_id    AS poster1_type_id_
+FROM player AS player
+LEFT JOIN character USING (character_id)
+LEFT JOIN inventory AS inventory_character  ON (character.item_id    = inventory_character.item_id)
+LEFT JOIN inventory AS inventory_caddie     ON (player.caddie_id     = inventory_caddie.item_id)
+LEFT JOIN inventory AS inventory_club       ON (player.club_id       = inventory_club.item_id)
+LEFT JOIN inventory AS inventory_background ON (player.background_id = inventory_background.item_id)
+LEFT JOIN inventory AS inventory_frame      ON (player.frame_id      = inventory_frame.item_id)
+LEFT JOIN inventory AS inventory_sticker    ON (player.sticker_id    = inventory_sticker.item_id)
+LEFT JOIN inventory AS inventory_slot       ON (player.slot_id       = inventory_slot.item_id)
+LEFT JOIN inventory AS inventory_cut_in     ON (player.cut_in_id     = inventory_cut_in.item_id)
+LEFT JOIN inventory AS inventory_title      ON (player.title_id      = inventory_title.item_id)
+LEFT JOIN inventory AS inventory_poster0    ON (player.poster0_id    = inventory_poster0.item_id)
+LEFT JOIN inventory AS inventory_poster1    ON (player.poster1_id    = inventory_poster1.item_id)
+WHERE player.player_id = ?
+LIMIT 1
 `
 
-func (q *Queries) GetPlayer(ctx context.Context, playerID int64) (Player, error) {
+type GetPlayerRow struct {
+	PlayerID                int64
+	Username                string
+	Nickname                sql.NullString
+	PasswordHash            string
+	Pang                    int64
+	Points                  int64
+	Rank                    int64
+	BallTypeID              int64
+	MascotTypeID            int64
+	Slot0TypeID             int64
+	Slot1TypeID             int64
+	Slot2TypeID             int64
+	Slot3TypeID             int64
+	Slot4TypeID             int64
+	Slot5TypeID             int64
+	Slot6TypeID             int64
+	Slot7TypeID             int64
+	Slot8TypeID             int64
+	Slot9TypeID             int64
+	CaddieID                sql.NullInt64
+	ClubID                  sql.NullInt64
+	BackgroundID            sql.NullInt64
+	FrameID                 sql.NullInt64
+	StickerID               sql.NullInt64
+	SlotID                  sql.NullInt64
+	CutInID                 sql.NullInt64
+	TitleID                 sql.NullInt64
+	Poster0ID               sql.NullInt64
+	Poster1ID               sql.NullInt64
+	CharacterID             sql.NullInt64
+	CharacterID_2           int64
+	PlayerID_2              int64
+	ItemID                  int64
+	HairColor               int64
+	Shirt                   int64
+	Mastery                 int64
+	Part00ItemID            sql.NullInt64
+	Part01ItemID            sql.NullInt64
+	Part02ItemID            sql.NullInt64
+	Part03ItemID            sql.NullInt64
+	Part04ItemID            sql.NullInt64
+	Part05ItemID            sql.NullInt64
+	Part06ItemID            sql.NullInt64
+	Part07ItemID            sql.NullInt64
+	Part08ItemID            sql.NullInt64
+	Part09ItemID            sql.NullInt64
+	Part10ItemID            sql.NullInt64
+	Part11ItemID            sql.NullInt64
+	Part12ItemID            sql.NullInt64
+	Part13ItemID            sql.NullInt64
+	Part14ItemID            sql.NullInt64
+	Part15ItemID            sql.NullInt64
+	Part16ItemID            sql.NullInt64
+	Part17ItemID            sql.NullInt64
+	Part18ItemID            sql.NullInt64
+	Part19ItemID            sql.NullInt64
+	Part20ItemID            sql.NullInt64
+	Part21ItemID            sql.NullInt64
+	Part22ItemID            sql.NullInt64
+	Part23ItemID            sql.NullInt64
+	Part00ItemTypeID        int64
+	Part01ItemTypeID        int64
+	Part02ItemTypeID        int64
+	Part03ItemTypeID        int64
+	Part04ItemTypeID        int64
+	Part05ItemTypeID        int64
+	Part06ItemTypeID        int64
+	Part07ItemTypeID        int64
+	Part08ItemTypeID        int64
+	Part09ItemTypeID        int64
+	Part10ItemTypeID        int64
+	Part11ItemTypeID        int64
+	Part12ItemTypeID        int64
+	Part13ItemTypeID        int64
+	Part14ItemTypeID        int64
+	Part15ItemTypeID        int64
+	Part16ItemTypeID        int64
+	Part17ItemTypeID        int64
+	Part18ItemTypeID        int64
+	Part19ItemTypeID        int64
+	Part20ItemTypeID        int64
+	Part21ItemTypeID        int64
+	Part22ItemTypeID        int64
+	Part23ItemTypeID        int64
+	AuxPart0ID              sql.NullInt64
+	AuxPart1ID              sql.NullInt64
+	AuxPart2ID              sql.NullInt64
+	AuxPart3ID              sql.NullInt64
+	AuxPart4ID              sql.NullInt64
+	CutInID_2               sql.NullInt64
+	CharacterTypeID         sql.NullInt64
+	CaddieTypeID            sql.NullInt64
+	ClubTypeID              sql.NullInt64
+	BackgroundTypeID        sql.NullInt64
+	FrameTypeID             sql.NullInt64
+	StickerTypeID           sql.NullInt64
+	SlotTypeID              sql.NullInt64
+	CutInTypeID             sql.NullInt64
+	TitleTypeID             sql.NullInt64
+	Poster0TypeID           sql.NullInt64
+	Poster1TypeID           sql.NullInt64
+}
+
+func (q *Queries) GetPlayer(ctx context.Context, playerID int64) (GetPlayerRow, error) {
 	row := q.db.QueryRowContext(ctx, getPlayer, playerID)
-	var i Player
+	var i GetPlayerRow
 	err := row.Scan(
 		&i.PlayerID,
 		&i.Username,
 		&i.Nickname,
 		&i.PasswordHash,
 		&i.Pang,
+		&i.Points,
 		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
+		&i.CharacterID_2,
+		&i.PlayerID_2,
+		&i.ItemID,
+		&i.HairColor,
+		&i.Shirt,
+		&i.Mastery,
+		&i.Part00ItemID,
+		&i.Part01ItemID,
+		&i.Part02ItemID,
+		&i.Part03ItemID,
+		&i.Part04ItemID,
+		&i.Part05ItemID,
+		&i.Part06ItemID,
+		&i.Part07ItemID,
+		&i.Part08ItemID,
+		&i.Part09ItemID,
+		&i.Part10ItemID,
+		&i.Part11ItemID,
+		&i.Part12ItemID,
+		&i.Part13ItemID,
+		&i.Part14ItemID,
+		&i.Part15ItemID,
+		&i.Part16ItemID,
+		&i.Part17ItemID,
+		&i.Part18ItemID,
+		&i.Part19ItemID,
+		&i.Part20ItemID,
+		&i.Part21ItemID,
+		&i.Part22ItemID,
+		&i.Part23ItemID,
+		&i.Part00ItemTypeID,
+		&i.Part01ItemTypeID,
+		&i.Part02ItemTypeID,
+		&i.Part03ItemTypeID,
+		&i.Part04ItemTypeID,
+		&i.Part05ItemTypeID,
+		&i.Part06ItemTypeID,
+		&i.Part07ItemTypeID,
+		&i.Part08ItemTypeID,
+		&i.Part09ItemTypeID,
+		&i.Part10ItemTypeID,
+		&i.Part11ItemTypeID,
+		&i.Part12ItemTypeID,
+		&i.Part13ItemTypeID,
+		&i.Part14ItemTypeID,
+		&i.Part15ItemTypeID,
+		&i.Part16ItemTypeID,
+		&i.Part17ItemTypeID,
+		&i.Part18ItemTypeID,
+		&i.Part19ItemTypeID,
+		&i.Part20ItemTypeID,
+		&i.Part21ItemTypeID,
+		&i.Part22ItemTypeID,
+		&i.Part23ItemTypeID,
+		&i.AuxPart0ID,
+		&i.AuxPart1ID,
+		&i.AuxPart2ID,
+		&i.AuxPart3ID,
+		&i.AuxPart4ID,
+		&i.CutInID_2,
+		&i.CharacterTypeID,
+		&i.CaddieTypeID,
+		&i.ClubTypeID,
+		&i.BackgroundTypeID,
+		&i.FrameTypeID,
+		&i.StickerTypeID,
+		&i.SlotTypeID,
+		&i.CutInTypeID,
+		&i.TitleTypeID,
+		&i.Poster0TypeID,
+		&i.Poster1TypeID,
 	)
 	return i, err
 }
 
 const getPlayerByUsername = `-- name: GetPlayerByUsername :one
-SELECT player_id, username, nickname, password_hash, pang, rank FROM player
-WHERE username = ? LIMIT 1
+SELECT player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id FROM player
+WHERE username = ?
+LIMIT 1
 `
 
 func (q *Queries) GetPlayerByUsername(ctx context.Context, username string) (Player, error) {
@@ -74,13 +325,460 @@ func (q *Queries) GetPlayerByUsername(ctx context.Context, username string) (Pla
 		&i.Nickname,
 		&i.PasswordHash,
 		&i.Pang,
+		&i.Points,
 		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
+	)
+	return i, err
+}
+
+const getPlayerConsumables = `-- name: GetPlayerConsumables :one
+SELECT
+    slot0_type_id,
+    slot1_type_id,
+    slot2_type_id,
+    slot3_type_id,
+    slot4_type_id,
+    slot5_type_id,
+    slot6_type_id,
+    slot7_type_id,
+    slot8_type_id,
+    slot9_type_id
+FROM player
+WHERE player_id = ?
+`
+
+type GetPlayerConsumablesRow struct {
+	Slot0TypeID int64
+	Slot1TypeID int64
+	Slot2TypeID int64
+	Slot3TypeID int64
+	Slot4TypeID int64
+	Slot5TypeID int64
+	Slot6TypeID int64
+	Slot7TypeID int64
+	Slot8TypeID int64
+	Slot9TypeID int64
+}
+
+func (q *Queries) GetPlayerConsumables(ctx context.Context, playerID int64) (GetPlayerConsumablesRow, error) {
+	row := q.db.QueryRowContext(ctx, getPlayerConsumables, playerID)
+	var i GetPlayerConsumablesRow
+	err := row.Scan(
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+	)
+	return i, err
+}
+
+const getPlayerCurrency = `-- name: GetPlayerCurrency :one
+SELECT pang, points FROM player WHERE player_id = ?
+`
+
+type GetPlayerCurrencyRow struct {
+	Pang   int64
+	Points int64
+}
+
+func (q *Queries) GetPlayerCurrency(ctx context.Context, playerID int64) (GetPlayerCurrencyRow, error) {
+	row := q.db.QueryRowContext(ctx, getPlayerCurrency, playerID)
+	var i GetPlayerCurrencyRow
+	err := row.Scan(&i.Pang, &i.Points)
+	return i, err
+}
+
+const setPlayerCaddie = `-- name: SetPlayerCaddie :one
+UPDATE player SET caddie_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+`
+
+type SetPlayerCaddieParams struct {
+	CaddieID sql.NullInt64
+	PlayerID int64
+}
+
+func (q *Queries) SetPlayerCaddie(ctx context.Context, arg SetPlayerCaddieParams) (Player, error) {
+	row := q.db.QueryRowContext(ctx, setPlayerCaddie, arg.CaddieID, arg.PlayerID)
+	var i Player
+	err := row.Scan(
+		&i.PlayerID,
+		&i.Username,
+		&i.Nickname,
+		&i.PasswordHash,
+		&i.Pang,
+		&i.Points,
+		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
+	)
+	return i, err
+}
+
+const setPlayerCharacter = `-- name: SetPlayerCharacter :one
+UPDATE player SET character_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+`
+
+type SetPlayerCharacterParams struct {
+	CharacterID sql.NullInt64
+	PlayerID    int64
+}
+
+func (q *Queries) SetPlayerCharacter(ctx context.Context, arg SetPlayerCharacterParams) (Player, error) {
+	row := q.db.QueryRowContext(ctx, setPlayerCharacter, arg.CharacterID, arg.PlayerID)
+	var i Player
+	err := row.Scan(
+		&i.PlayerID,
+		&i.Username,
+		&i.Nickname,
+		&i.PasswordHash,
+		&i.Pang,
+		&i.Points,
+		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
+	)
+	return i, err
+}
+
+const setPlayerClubSet = `-- name: SetPlayerClubSet :one
+UPDATE player SET club_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+`
+
+type SetPlayerClubSetParams struct {
+	ClubID   sql.NullInt64
+	PlayerID int64
+}
+
+func (q *Queries) SetPlayerClubSet(ctx context.Context, arg SetPlayerClubSetParams) (Player, error) {
+	row := q.db.QueryRowContext(ctx, setPlayerClubSet, arg.ClubID, arg.PlayerID)
+	var i Player
+	err := row.Scan(
+		&i.PlayerID,
+		&i.Username,
+		&i.Nickname,
+		&i.PasswordHash,
+		&i.Pang,
+		&i.Points,
+		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
+	)
+	return i, err
+}
+
+const setPlayerComet = `-- name: SetPlayerComet :one
+UPDATE player SET ball_type_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+`
+
+type SetPlayerCometParams struct {
+	BallTypeID int64
+	PlayerID   int64
+}
+
+func (q *Queries) SetPlayerComet(ctx context.Context, arg SetPlayerCometParams) (Player, error) {
+	row := q.db.QueryRowContext(ctx, setPlayerComet, arg.BallTypeID, arg.PlayerID)
+	var i Player
+	err := row.Scan(
+		&i.PlayerID,
+		&i.Username,
+		&i.Nickname,
+		&i.PasswordHash,
+		&i.Pang,
+		&i.Points,
+		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
+	)
+	return i, err
+}
+
+const setPlayerConsumables = `-- name: SetPlayerConsumables :one
+UPDATE player
+SET
+    slot0_type_id = ?,
+    slot1_type_id = ?,
+    slot2_type_id = ?,
+    slot3_type_id = ?,
+    slot4_type_id = ?,
+    slot5_type_id = ?,
+    slot6_type_id = ?,
+    slot7_type_id = ?,
+    slot8_type_id = ?,
+    slot9_type_id = ?
+WHERE player_id = ?
+RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+`
+
+type SetPlayerConsumablesParams struct {
+	Slot0TypeID int64
+	Slot1TypeID int64
+	Slot2TypeID int64
+	Slot3TypeID int64
+	Slot4TypeID int64
+	Slot5TypeID int64
+	Slot6TypeID int64
+	Slot7TypeID int64
+	Slot8TypeID int64
+	Slot9TypeID int64
+	PlayerID    int64
+}
+
+func (q *Queries) SetPlayerConsumables(ctx context.Context, arg SetPlayerConsumablesParams) (Player, error) {
+	row := q.db.QueryRowContext(ctx, setPlayerConsumables,
+		arg.Slot0TypeID,
+		arg.Slot1TypeID,
+		arg.Slot2TypeID,
+		arg.Slot3TypeID,
+		arg.Slot4TypeID,
+		arg.Slot5TypeID,
+		arg.Slot6TypeID,
+		arg.Slot7TypeID,
+		arg.Slot8TypeID,
+		arg.Slot9TypeID,
+		arg.PlayerID,
+	)
+	var i Player
+	err := row.Scan(
+		&i.PlayerID,
+		&i.Username,
+		&i.Nickname,
+		&i.PasswordHash,
+		&i.Pang,
+		&i.Points,
+		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
+	)
+	return i, err
+}
+
+const setPlayerCurrency = `-- name: SetPlayerCurrency :one
+UPDATE player SET pang = ?, points = ? WHERE player_id = ? RETURNING pang, points
+`
+
+type SetPlayerCurrencyParams struct {
+	Pang     int64
+	Points   int64
+	PlayerID int64
+}
+
+type SetPlayerCurrencyRow struct {
+	Pang   int64
+	Points int64
+}
+
+func (q *Queries) SetPlayerCurrency(ctx context.Context, arg SetPlayerCurrencyParams) (SetPlayerCurrencyRow, error) {
+	row := q.db.QueryRowContext(ctx, setPlayerCurrency, arg.Pang, arg.Points, arg.PlayerID)
+	var i SetPlayerCurrencyRow
+	err := row.Scan(&i.Pang, &i.Points)
+	return i, err
+}
+
+const setPlayerDecoration = `-- name: SetPlayerDecoration :one
+UPDATE player
+SET
+    background_id = ?,
+    frame_id = ?,
+    sticker_id = ?,
+    slot_id = ?,
+    cut_in_id = ?,
+    title_id = ?
+WHERE player_id = ?
+RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+`
+
+type SetPlayerDecorationParams struct {
+	BackgroundID sql.NullInt64
+	FrameID      sql.NullInt64
+	StickerID    sql.NullInt64
+	SlotID       sql.NullInt64
+	CutInID      sql.NullInt64
+	TitleID      sql.NullInt64
+	PlayerID     int64
+}
+
+func (q *Queries) SetPlayerDecoration(ctx context.Context, arg SetPlayerDecorationParams) (Player, error) {
+	row := q.db.QueryRowContext(ctx, setPlayerDecoration,
+		arg.BackgroundID,
+		arg.FrameID,
+		arg.StickerID,
+		arg.SlotID,
+		arg.CutInID,
+		arg.TitleID,
+		arg.PlayerID,
+	)
+	var i Player
+	err := row.Scan(
+		&i.PlayerID,
+		&i.Username,
+		&i.Nickname,
+		&i.PasswordHash,
+		&i.Pang,
+		&i.Points,
+		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
 	)
 	return i, err
 }
 
 const setPlayerNickname = `-- name: SetPlayerNickname :one
-UPDATE player SET nickname = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, rank
+UPDATE player SET nickname = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
 `
 
 type SetPlayerNicknameParams struct {
@@ -97,7 +795,31 @@ func (q *Queries) SetPlayerNickname(ctx context.Context, arg SetPlayerNicknamePa
 		&i.Nickname,
 		&i.PasswordHash,
 		&i.Pang,
+		&i.Points,
 		&i.Rank,
+		&i.BallTypeID,
+		&i.MascotTypeID,
+		&i.Slot0TypeID,
+		&i.Slot1TypeID,
+		&i.Slot2TypeID,
+		&i.Slot3TypeID,
+		&i.Slot4TypeID,
+		&i.Slot5TypeID,
+		&i.Slot6TypeID,
+		&i.Slot7TypeID,
+		&i.Slot8TypeID,
+		&i.Slot9TypeID,
+		&i.CaddieID,
+		&i.ClubID,
+		&i.BackgroundID,
+		&i.FrameID,
+		&i.StickerID,
+		&i.SlotID,
+		&i.CutInID,
+		&i.TitleID,
+		&i.Poster0ID,
+		&i.Poster1ID,
+		&i.CharacterID,
 	)
 	return i, err
 }
