@@ -589,7 +589,7 @@ func (r *Room) handleRoomGameTurnEnd(ctx context.Context, event RoomGameTurnEnd)
 							Nickname: common.ToPString(pair.Value.Entry.Nickname),
 						},
 						GameEnd: &gamepacket.GameEnd{
-							Score: pair.Value.Score,
+							Score: 0, // ?
 							Pang:  pair.Value.Pang,
 						},
 					})
@@ -683,7 +683,7 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 		})
 		if pair := r.players.GetPair(r.state.ShotSync.ActiveConnID); pair != nil {
 			pair.Value.Pang += uint64(r.state.ShotSync.Pang)
-			pair.Value.BonusPang += uint64(r.state.ShotSync.Pang)
+			pair.Value.BonusPang += uint64(r.state.ShotSync.BonusPang)
 			pair.Value.Stroke++
 		} else {
 			log.WithField("ConnID", r.state.ShotSync.ActiveConnID).Warn("couldn't find conn")
