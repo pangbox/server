@@ -190,6 +190,7 @@ type RoomGameTurnEnd struct {
 type RoomGameHoleEnd struct {
 	roomEvent
 	ConnID uint32
+	Stats  pangya.PlayerStats
 }
 
 type RoomGameShotSync struct {

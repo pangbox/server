@@ -25,6 +25,7 @@ import (
 
 	"github.com/pangbox/server/common"
 	"github.com/pangbox/server/common/actor"
+	"github.com/pangbox/server/database/accounts"
 	gamemodel "github.com/pangbox/server/game/model"
 	gamepacket "github.com/pangbox/server/game/packet"
 	log "github.com/sirupsen/logrus"
@@ -34,9 +35,10 @@ import (
 
 type Lobby struct {
 	actor.Base[LobbyEvent]
-	logger  *log.Entry
-	storage *Storage
-	players *orderedmap.OrderedMap[uint32, *LobbyPlayer]
+	logger   *log.Entry
+	storage  *Storage
+	players  *orderedmap.OrderedMap[uint32, *LobbyPlayer]
+	accounts *accounts.Service
 }
 
 type LobbyPlayer struct {
@@ -45,11 +47,12 @@ type LobbyPlayer struct {
 	Joined time.Time
 }
 
-func NewLobby(ctx context.Context, logger *log.Entry) *Lobby {
+func NewLobby(ctx context.Context, logger *log.Entry, accounts *accounts.Service) *Lobby {
 	lobby := &Lobby{
-		logger:  logger,
-		storage: new(Storage),
-		players: orderedmap.New[uint32, *LobbyPlayer](),
+		logger:   logger,
+		storage:  new(Storage),
+		players:  orderedmap.New[uint32, *LobbyPlayer](),
+		accounts: accounts,
 	}
 	lobby.TryStart(ctx, lobby.task)
 	return lobby
@@ -150,7 +153,7 @@ func (l *Lobby) handleEvent(ctx context.Context, t *actor.Task[LobbyEvent], msg 
 
 func (l *Lobby) lobbyRoomCreate(ctx context.Context, e *LobbyRoomCreate) (*Room, error) {
 	room := l.storage.NewRoom(ctx)
-	room.Start(ctx, e.Room, l)
+	room.Start(ctx, e.Room, l, l.accounts)
 	e.Room.RoomNumber = room.Number()
 	l.broadcast(ctx, &gamepacket.ServerRoomList{
 		Count:   1,

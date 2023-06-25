@@ -57,17 +57,9 @@ type PlayerStats struct {
 	Level             byte
 	Pang              uint64
 	TotalScore        int32
-	Difficulty1Score  uint8 //Not 100% sure on these
-	Difficulty2Score  uint8
-	Difficulty3Score  uint8
-	Difficulty4Score  uint8
-	Difficulty5Score  uint8
+	DifficultyScore   [5]uint8
 	UnknownFlag       uint8 //possibly total?
-	BestPang1         uint64
-	BestPang2         uint64
-	BestPang3         uint64
-	BestPang4         uint64
-	BestPang5         uint64
+	BestPang          [5]uint64
 	BestPangTotal     uint64
 	GamesPlayed       uint32
 	TeamHole          uint32

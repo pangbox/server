@@ -68,7 +68,7 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x00A1: &ServerUserInfo{},
 	0x00A3: &ServerPlayerLoadProgress{},
 	0x00C4: &ServerRoomAction{},
-	0x00C8: &ServerPangPurchaseData{},
+	0x00C8: &ServerPangBalanceData{},
 	0x00CC: &ServerRoomShotEnd{},
 	0x00F1: &ServerMessageConnect{},
 	0x00F5: &ServerMultiplayerJoined{},
@@ -299,8 +299,8 @@ type ServerRoomAction struct {
 	gamemodel.RoomAction
 }
 
-// ServerPangPurchaseData is sent after a pang purchase succeeds.
-type ServerPangPurchaseData struct {
+// ServerPangBalanceData is sent after a pang purchase succeeds.
+type ServerPangBalanceData struct {
 	ServerMessage_
 	PangsRemaining uint64
 	PangsSpent     uint64
@@ -522,10 +522,10 @@ type ServerRoomItemUseAnnounce struct {
 
 type ServerRoomSetWind struct {
 	ServerMessage_
-	Wind     uint8
-	Unknown  uint8
-	Unknown2 uint16
-	Reset    bool `struct:"bool"`
+	Wind    uint8
+	Unknown uint8
+	Heading uint16
+	Reset   bool `struct:"bool"`
 }
 
 type ServerRoomUserTypingAnnounce struct {
@@ -568,7 +568,7 @@ type PlayerGameResult struct {
 type ServerRoomFinishGame struct {
 	ServerMessage_
 	NumPlayers uint8
-	Results    []PlayerGameResult `struct:"sizefrom=NumPlayers"`
+	Standings  []PlayerGameResult `struct:"sizefrom=NumPlayers"`
 }
 
 type ServerPurchaseItemResponse struct {
@@ -638,9 +638,8 @@ type UpdateRewardUnknownData struct {
 }
 
 type UpdatePangBalanceData struct {
-	Unknown    uint32
-	PangAmount uint32
-	Unknown2   uint32
+	Status     uint32
+	PangAmount uint64
 }
 
 type ServerMoneyUpdate struct {

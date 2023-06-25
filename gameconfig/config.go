@@ -25,6 +25,7 @@ func init() {
 type Provider interface {
 	GetCharacterDefaults(id uint8) CharacterDefaults
 	GetDefaultClubSetTypeID() uint32
+	GetDefaultPang() uint64
 }
 
 type CharacterDefaults struct {
@@ -35,11 +36,13 @@ type CharacterDefaults struct {
 type Manifest struct {
 	CharacterDefaults    []CharacterDefaults `json:"CharacterDefaults"`
 	DefaultClubSetTypeID uint32              `json:"DefaultClubSetTypeID"`
+	DefaultPang          uint64              `json:"DefaultPang"`
 }
 
 type configFileProvider struct {
 	characterDefaults    map[uint8]CharacterDefaults
 	defaultClubSetTypeID uint32
+	defaultPang          uint64
 }
 
 func Default() Provider {
@@ -74,6 +77,7 @@ func FromManifest(manifest Manifest) Provider {
 	provider := &configFileProvider{
 		characterDefaults:    make(map[uint8]CharacterDefaults),
 		defaultClubSetTypeID: manifest.DefaultClubSetTypeID,
+		defaultPang:          manifest.DefaultPang,
 	}
 	for _, defaults := range manifest.CharacterDefaults {
 		provider.characterDefaults[defaults.CharacterID] = defaults
@@ -87,4 +91,8 @@ func (c *configFileProvider) GetCharacterDefaults(id uint8) CharacterDefaults {
 
 func (c *configFileProvider) GetDefaultClubSetTypeID() uint32 {
 	return c.defaultClubSetTypeID
+}
+
+func (c *configFileProvider) GetDefaultPang() uint64 {
+	return c.defaultPang
 }

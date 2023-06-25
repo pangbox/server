@@ -38,9 +38,10 @@ LIMIT 1;
 INSERT INTO player (
     username,
     nickname,
-    password_hash
+    password_hash,
+    pang
 ) VALUES (
-    ?, ?, ?
+    ?, ?, ?, ?
 )
 RETURNING *;
 

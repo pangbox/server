@@ -253,10 +253,18 @@ func (c *Conn) Handle(ctx context.Context) error {
 				Club:   t.Club,
 			})
 		case *gamepacket.ClientShotItemUse:
-			c.currentRoom.Send(ctx, room.RoomGameShotItemUse{
-				ConnID:     c.connID,
-				ItemTypeID: t.ItemTypeID,
-			})
+			if c.currentRoom == nil {
+				break
+			}
+			err := c.s.accountsService.UseItem(ctx, c.session.PlayerID, int64(t.ItemTypeID), &c.player)
+			if err != nil {
+				log.WithError(err).Error("using item failed")
+			} else {
+				c.currentRoom.Send(ctx, room.RoomGameShotItemUse{
+					ConnID:     c.connID,
+					ItemTypeID: t.ItemTypeID,
+				})
+			}
 		case *gamepacket.ClientUserTypingIndicator:
 			c.currentRoom.Send(ctx, room.RoomGameTypingIndicator{
 				ConnID: c.connID,
@@ -276,6 +284,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 		case *gamepacket.ClientHoleEnd:
 			c.currentRoom.Send(ctx, room.RoomGameHoleEnd{
 				ConnID: c.connID,
+				Stats:  t.Stats,
 			})
 		case *gamepacket.ClientGameEnd:
 			// TODO
@@ -623,7 +632,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 					return fmt.Errorf("purchasing item %v: %w", item.ItemTypeID, err)
 				}
 			}
-			if err := c.SendMessage(ctx, &gamepacket.ServerPangPurchaseData{
+			if err := c.SendMessage(ctx, &gamepacket.ServerPangBalanceData{
 				PangsRemaining: uint64(newCurrency.Pang),
 				PangsSpent:     uint64(pangTotal),
 			}); err != nil {

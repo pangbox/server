@@ -26,19 +26,22 @@ import (
 
 	"github.com/pangbox/server/common"
 	"github.com/pangbox/server/common/actor"
+	"github.com/pangbox/server/database/accounts"
 	gamemodel "github.com/pangbox/server/game/model"
 	gamepacket "github.com/pangbox/server/game/packet"
 	"github.com/pangbox/server/pangya"
 	log "github.com/sirupsen/logrus"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
 
 type Room struct {
 	actor.Base[RoomEvent]
-	state   gamemodel.RoomState
-	players *orderedmap.OrderedMap[uint32, RoomPlayer]
-	lobby   *Lobby
+	state    gamemodel.RoomState
+	players  *orderedmap.OrderedMap[uint32, RoomPlayer]
+	lobby    *Lobby
+	accounts *accounts.Service
 }
 
 type PlayerGameState struct {
@@ -53,9 +56,13 @@ type RoomPlayer struct {
 	Conn       *gamepacket.ServerConn
 	PlayerData pangya.PlayerData
 	GameState  *PlayerGameState
+	Pang       uint64
+	BonusPang  uint64
+	Stroke     int8
+	Score      int32
 }
 
-func (r *Room) Start(ctx context.Context, state gamemodel.RoomState, lobby *Lobby) bool {
+func (r *Room) Start(ctx context.Context, state gamemodel.RoomState, lobby *Lobby, accounts *accounts.Service) bool {
 	return r.TryStart(ctx, func(ctx context.Context, t *actor.Task[RoomEvent]) error {
 		r.state.Active = true
 		r.state.Open = true
@@ -73,6 +80,7 @@ func (r *Room) Start(ctx context.Context, state gamemodel.RoomState, lobby *Lobb
 		r.state.GamePhase = gamemodel.LobbyPhase
 		r.players = orderedmap.New[uint32, RoomPlayer]()
 		r.lobby = lobby
+		r.accounts = accounts
 		return r.task(ctx, t)
 	})
 }
@@ -318,10 +326,10 @@ func (r *Room) handlePlayerLeave(ctx context.Context, event RoomPlayerLeave) err
 
 func (r *Room) handleRoomAction(ctx context.Context, event RoomAction) error {
 	if event.Action.Rotation != nil {
-		if player, ok := r.players.Get(event.ConnID); ok {
-			player.Entry.Angle = event.Action.Rotation.Z
+		if pair := r.players.GetPair(event.ConnID); pair != nil {
+			pair.Value.Entry.Angle = event.Action.Rotation.Z
 			return r.broadcast(ctx, &gamepacket.ServerRoomAction{
-				ConnID:     player.Entry.ConnID,
+				ConnID:     pair.Value.Entry.ConnID,
 				RoomAction: event.Action,
 			})
 		}
@@ -330,11 +338,11 @@ func (r *Room) handleRoomAction(ctx context.Context, event RoomAction) error {
 }
 
 func (r *Room) handleRoomPlayerIdle(ctx context.Context, event RoomPlayerIdle) error {
-	if player, ok := r.players.Get(event.ConnID); ok {
+	if pair := r.players.GetPair(event.ConnID); pair != nil {
 		if event.Idle {
-			player.Entry.StatusFlags |= gamemodel.RoomStateAway
+			pair.Value.Entry.StatusFlags |= gamemodel.RoomStateAway
 		} else {
-			player.Entry.StatusFlags &^= gamemodel.RoomStateAway
+			pair.Value.Entry.StatusFlags &^= gamemodel.RoomStateAway
 		}
 		// TODO: not sure what to broadcast
 		return r.broadcastPlayerList(ctx)
@@ -343,16 +351,16 @@ func (r *Room) handleRoomPlayerIdle(ctx context.Context, event RoomPlayerIdle) e
 }
 
 func (r *Room) handleRoomPlayerReady(ctx context.Context, event RoomPlayerReady) error {
-	if player, ok := r.players.Get(event.ConnID); ok {
+	if pair := r.players.GetPair(event.ConnID); pair != nil {
 		state := byte(0)
 		if event.Ready {
-			player.Entry.StatusFlags |= gamemodel.RoomStateReady
+			pair.Value.Entry.StatusFlags |= gamemodel.RoomStateReady
 		} else {
-			player.Entry.StatusFlags &^= gamemodel.RoomStateReady
+			pair.Value.Entry.StatusFlags &^= gamemodel.RoomStateReady
 			state = 1
 		}
 		return r.broadcast(ctx, &gamepacket.ServerPlayerReady{
-			ConnID: player.Entry.ConnID,
+			ConnID: pair.Value.Entry.ConnID,
 			State:  state,
 		})
 	}
@@ -360,18 +368,18 @@ func (r *Room) handleRoomPlayerReady(ctx context.Context, event RoomPlayerReady)
 }
 
 func (r *Room) handleRoomPlayerKick(ctx context.Context, event RoomPlayerKick) error {
-	player, ok := r.players.Get(event.ConnID)
-	if !ok {
+	pair := r.players.GetPair(event.ConnID)
+	if pair == nil {
 		return nil
 	}
-	subject, ok := r.players.Get(event.KickConnID)
-	if !ok {
+	subject := r.players.GetPair(event.KickConnID)
+	if subject == nil {
 		return nil
 	}
-	if player.Entry.ConnID != r.state.OwnerConnID {
+	if pair.Value.Entry.ConnID != r.state.OwnerConnID {
 		return nil
 	}
-	return r.removePlayer(ctx, subject.Entry.ConnID)
+	return r.removePlayer(ctx, subject.Value.Entry.ConnID)
 }
 
 func (r *Room) handleRoomSettingsChange(ctx context.Context, event RoomSettingsChange) error {
@@ -431,6 +439,9 @@ func (r *Room) handleRoomStartGame(ctx context.Context, event RoomStartGame) err
 	}
 	r.state.CurrentHole = 1
 	for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
+		// Clear ready status.
+		pair.Value.Entry.StatusFlags &^= gamemodel.RoomStateReady
+
 		player := pair.Value
 		gameInit.Full.Players[i] = gamepacket.GamePlayer{
 			Number:     uint16(i + 1),
@@ -473,8 +484,8 @@ func (r *Room) handleRoomLoadingProgress(ctx context.Context, event RoomLoadingP
 }
 
 func (r *Room) handleRoomGameReady(ctx context.Context, event RoomGameReady) error {
-	if player, ok := r.players.Get(event.ConnID); ok {
-		player.GameState.GameReady = true
+	if pair := r.players.GetPair(event.ConnID); pair != nil {
+		pair.Value.GameState.GameReady = true
 	}
 	if r.checkGameReady() {
 		r.startHole(ctx)
@@ -543,8 +554,8 @@ func (r *Room) handleRoomGameTurn(ctx context.Context, event RoomGameTurn) error
 }
 
 func (r *Room) handleRoomGameTurnEnd(ctx context.Context, event RoomGameTurnEnd) error {
-	if player, ok := r.players.Get(event.ConnID); ok {
-		player.GameState.TurnEnd = true
+	if pair := r.players.GetPair(event.ConnID); pair != nil {
+		pair.Value.GameState.TurnEnd = true
 	}
 	if r.checkTurnEnd() {
 		r.broadcast(ctx, &gamepacket.ServerRoomShotEnd{
@@ -572,25 +583,56 @@ func (r *Room) handleRoomGameTurnEnd(ctx context.Context, event RoomGameTurnEnd)
 			r.state.CurrentHole++
 			if r.state.CurrentHole > r.state.NumHoles {
 				for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
-					// TODO:
-					// - Need to actually calculate values for real.
 					r.broadcast(ctx, &gamepacket.ServerEvent{
 						Type: gamepacket.GameEndEvent,
 						Data: gamepacket.ChatMessage{
 							Nickname: common.ToPString(pair.Value.Entry.Nickname),
 						},
 						GameEnd: &gamepacket.GameEnd{
-							Score: 0,
-							Pang:  0,
+							Score: pair.Value.Score,
+							Pang:  pair.Value.Pang,
 						},
 					})
 					results := &gamepacket.ServerRoomFinishGame{
 						NumPlayers: uint8(r.players.Len()),
-						Results:    make([]gamepacket.PlayerGameResult, r.players.Len()),
+						Standings:  make([]gamepacket.PlayerGameResult, r.players.Len()),
 					}
 					for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
-						results.Results[i].ConnID = pair.Value.Entry.ConnID
-						results.Results[i].Place = uint8(i + 1)
+						results.Standings[i].ConnID = pair.Value.Entry.ConnID
+						results.Standings[i].Pang = pair.Value.Pang
+						results.Standings[i].Score = int8(pair.Value.Score)
+						results.Standings[i].BonusPang = pair.Value.BonusPang
+
+						newPang, err := r.accounts.AddPang(ctx, int64(pair.Value.Entry.PlayerID), int64(pair.Value.Pang+pair.Value.BonusPang))
+						if err != nil {
+							log.WithError(err).Error("failed giving game-ending pang")
+						}
+
+						if err := pair.Value.Conn.SendMessage(ctx, &gamepacket.ServerPangBalanceData{PangsRemaining: uint64(newPang)}); err != nil {
+							log.WithError(err).Error("failed informing player of game-ending pang")
+						}
+
+						// reset game state now
+						pair.Value.Score = 0
+						pair.Value.Pang = 0
+						pair.Value.BonusPang = 0
+						pair.Value.GameState.HoleEnd = false
+						pair.Value.GameState.ShotSync = nil
+
+						i++
+					}
+					slices.SortFunc(results.Standings, func(a, b gamepacket.PlayerGameResult) bool {
+						return a.Score < b.Score
+					})
+					results.Standings[0].Place = 1
+					for i := 1; i < len(results.Standings); i++ {
+						if results.Standings[i-1].Score == results.Standings[i].Score {
+							// If tie: use placement of tied player(s)
+							results.Standings[i].Place = results.Standings[i-1].Place
+						} else {
+							// If not tie: use position in standing as placement
+							results.Standings[i].Place = uint8(i + 1)
+						}
 					}
 					r.broadcast(ctx, results)
 					r.state.Open = true
@@ -615,8 +657,10 @@ func (r *Room) handleRoomGameTurnEnd(ctx context.Context, event RoomGameTurnEnd)
 }
 
 func (r *Room) handleRoomGameHoleEnd(ctx context.Context, event RoomGameHoleEnd) error {
-	if player, ok := r.players.Get(event.ConnID); ok {
-		player.GameState.HoleEnd = true
+	if pair := r.players.GetPair(event.ConnID); pair != nil {
+		pair.Value.GameState.HoleEnd = true
+		pair.Value.Score += int32(pair.Value.Stroke) - int32(r.state.HoleInfo.Par)
+		pair.Value.Stroke = 0
 	}
 	return nil
 }
@@ -630,13 +674,20 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 			log.Warningf("Shot sync mismatch: %#v vs %#v", r.state.ShotSync, syncData)
 		}
 	}
-	if player, ok := r.players.Get(event.ConnID); ok {
-		player.GameState.ShotSync = r.state.ShotSync
+	if pair := r.players.GetPair(event.ConnID); pair != nil {
+		pair.Value.GameState.ShotSync = r.state.ShotSync
 	}
 	if r.checkShotSync() {
 		r.broadcast(ctx, &gamepacket.ServerRoomShotSync{
 			Data: *r.state.ShotSync,
 		})
+		if pair := r.players.GetPair(r.state.ShotSync.ActiveConnID); pair != nil {
+			pair.Value.Pang += uint64(r.state.ShotSync.Pang)
+			pair.Value.BonusPang += uint64(r.state.ShotSync.Pang)
+			pair.Value.Stroke++
+		} else {
+			log.WithField("ConnID", r.state.ShotSync.ActiveConnID).Warn("couldn't find conn")
+		}
 		for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
 			pair.Value.GameState.ShotSync = nil
 		}
@@ -646,7 +697,13 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 }
 
 func (r *Room) handleRoomGameHoleInfo(ctx context.Context, event RoomGameHoleInfo) error {
-	fmt.Printf("%#v\n", event)
+	r.state.HoleInfo = &gamemodel.HoleInfo{
+		Par:  event.Par,
+		TeeX: event.TeeX,
+		TeeZ: event.TeeZ,
+		PinX: event.PinX,
+		PinZ: event.PinZ,
+	}
 	return nil
 }
 
@@ -690,11 +747,19 @@ func (r *Room) startHole(ctx context.Context) error {
 	r.broadcast(ctx, &gamepacket.ServerRoomSetWeather{
 		Weather: 0,
 	})
+	// Allow wind up to 12m, but make it increasingly unlikely.
+	wind := rand.Intn(12)
+	if wind >= 11 {
+		wind = rand.Intn(12)
+	}
+	if wind >= 10 {
+		wind = rand.Intn(12)
+	}
 	r.broadcast(ctx, &gamepacket.ServerRoomSetWind{
-		Wind:     10,
-		Unknown:  0,
-		Unknown2: 0x98,
-		Reset:    true,
+		Wind:    uint8(wind),
+		Unknown: 0,
+		Heading: uint16(rand.Intn(256)),
+		Reset:   true,
 	})
 	// TODO: select player based on proper order
 	r.state.ActiveConnID = r.players.Oldest().Key
@@ -737,15 +802,15 @@ func (r *Room) startHole(ctx context.Context) error {
 }
 
 func (r *Room) removePlayer(ctx context.Context, connID uint32) error {
-	if player, ok := r.players.Get(connID); ok {
-		err := player.Conn.SendMessage(ctx, &gamepacket.ServerRoomLeave{
+	if pair := r.players.GetPair(connID); pair != nil {
+		err := pair.Value.Conn.SendMessage(ctx, &gamepacket.ServerRoomLeave{
 			RoomNumber: -1,
 		})
 		r.broadcast(ctx, &gamepacket.ServerRoomCensus{
 			Type:    byte(gamepacket.ListRemove),
 			Unknown: -1,
 			ListRemove: &gamepacket.RoomCensusListRemove{
-				ConnID: player.Entry.ConnID,
+				ConnID: pair.Value.Entry.ConnID,
 			},
 		})
 		r.players.Delete(connID)
@@ -753,7 +818,7 @@ func (r *Room) removePlayer(ctx context.Context, connID uint32) error {
 			ConnID:     connID,
 			RoomNumber: -1,
 		})
-		if r.state.OwnerConnID == player.Entry.ConnID && r.players.Len() > 0 {
+		if r.state.OwnerConnID == pair.Value.Entry.ConnID && r.players.Len() > 0 {
 			newOwner := r.players.Oldest()
 			newOwner.Value.Entry.StatusFlags |= gamemodel.RoomStateMaster
 			r.state.OwnerConnID = newOwner.Value.Entry.ConnID

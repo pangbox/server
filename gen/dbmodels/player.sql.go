@@ -14,9 +14,10 @@ const createPlayer = `-- name: CreatePlayer :one
 INSERT INTO player (
     username,
     nickname,
-    password_hash
+    password_hash,
+    pang
 ) VALUES (
-    ?, ?, ?
+    ?, ?, ?, ?
 )
 RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
 `
@@ -25,10 +26,16 @@ type CreatePlayerParams struct {
 	Username     string
 	Nickname     sql.NullString
 	PasswordHash string
+	Pang         int64
 }
 
 func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (Player, error) {
-	row := q.db.QueryRowContext(ctx, createPlayer, arg.Username, arg.Nickname, arg.PasswordHash)
+	row := q.db.QueryRowContext(ctx, createPlayer,
+		arg.Username,
+		arg.Nickname,
+		arg.PasswordHash,
+		arg.Pang,
+	)
 	var i Player
 	err := row.Scan(
 		&i.PlayerID,

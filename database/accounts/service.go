@@ -22,6 +22,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -72,6 +73,7 @@ func (s *Service) Register(ctx context.Context, username, password string) (dbmo
 	return s.queries.CreatePlayer(ctx, dbmodels.CreatePlayerParams{
 		Username:     username,
 		PasswordHash: hash,
+		Pang:         20000, // TODO
 	})
 }
 
@@ -261,6 +263,42 @@ func (s *Service) getConsumablesWith(ctx context.Context, tx *dbmodels.Queries, 
 	}, nil
 }
 
+func (s *Service) setConsumablesWith(ctx context.Context, tx *dbmodels.Queries, playerID int64, newSlots [10]uint32) (dbmodels.Player, error) {
+	ret, err := tx.SetPlayerConsumables(ctx, dbmodels.SetPlayerConsumablesParams{
+		PlayerID:    playerID,
+		Slot0TypeID: int64(newSlots[0]),
+		Slot1TypeID: int64(newSlots[1]),
+		Slot2TypeID: int64(newSlots[2]),
+		Slot3TypeID: int64(newSlots[3]),
+		Slot4TypeID: int64(newSlots[4]),
+		Slot5TypeID: int64(newSlots[5]),
+		Slot6TypeID: int64(newSlots[6]),
+		Slot7TypeID: int64(newSlots[7]),
+		Slot8TypeID: int64(newSlots[8]),
+		Slot9TypeID: int64(newSlots[9]),
+	})
+	if err != nil {
+		return dbmodels.Player{}, err
+	}
+
+	return ret, nil
+}
+
+func (s *Service) updateConsumables(player *dbmodels.GetPlayerRow, ret dbmodels.Player) {
+	if player != nil {
+		player.Slot0TypeID = ret.Slot0TypeID
+		player.Slot1TypeID = ret.Slot1TypeID
+		player.Slot2TypeID = ret.Slot2TypeID
+		player.Slot3TypeID = ret.Slot3TypeID
+		player.Slot4TypeID = ret.Slot4TypeID
+		player.Slot5TypeID = ret.Slot5TypeID
+		player.Slot6TypeID = ret.Slot6TypeID
+		player.Slot7TypeID = ret.Slot7TypeID
+		player.Slot8TypeID = ret.Slot8TypeID
+		player.Slot9TypeID = ret.Slot9TypeID
+	}
+}
+
 func (s *Service) decrementConsumableQuantityWith(ctx context.Context, tx *dbmodels.Queries, playerID, itemTypeID int64) (int64, error) {
 	items, err := tx.GetItemsByTypeID(ctx, dbmodels.GetItemsByTypeIDParams{
 		PlayerID:   playerID,
@@ -282,13 +320,16 @@ func (s *Service) decrementConsumableQuantityWith(ctx context.Context, tx *dbmod
 	} else if quantity > 1 {
 		_, err := tx.SetItemQuantity(ctx, dbmodels.SetItemQuantityParams{
 			PlayerID: playerID,
+			ItemID:   item.ItemID,
 			Quantity: sql.NullInt64{Int64: quantity - 1, Valid: true},
 		})
+		log.Printf("decrement consumable quantity: %d to %d", quantity, quantity-1)
 		if err != nil {
 			return 0, err
 		}
 		return item.ItemID, nil
 	} else {
+		log.Printf("remove consumable")
 		return item.ItemID, tx.RemoveItemFromInventory(ctx, dbmodels.RemoveItemFromInventoryParams{
 			PlayerID: playerID,
 			ItemID:   item.ItemID,
@@ -310,7 +351,7 @@ func (s *Service) incrementConsumableQuantityWith(ctx context.Context, tx *dbmod
 		_, err = tx.AddItemToInventory(ctx, dbmodels.AddItemToInventoryParams{
 			PlayerID:   playerID,
 			ItemTypeID: itemTypeID,
-			Quantity:   sql.NullInt64{Valid: true, Int64: 1},
+			Quantity:   sql.NullInt64{Valid: true, Int64: amount},
 		})
 		if err != nil {
 			return fmt.Errorf("adding item to inventory: %w", err)
@@ -325,6 +366,7 @@ func (s *Service) incrementConsumableQuantityWith(ctx context.Context, tx *dbmod
 	quantity := item.Quantity.Int64
 	_, err = tx.SetItemQuantity(ctx, dbmodels.SetItemQuantityParams{
 		PlayerID: playerID,
+		ItemID:   item.ItemID,
 		Quantity: sql.NullInt64{Int64: quantity + amount, Valid: true},
 	})
 	return err
@@ -342,30 +384,8 @@ func (s *Service) SetConsumables(ctx context.Context, playerID int64, newSlots [
 	defer tx.Rollback()
 
 	queries := s.queries.WithTx(tx)
-	oldSlots, err := s.getConsumablesWith(ctx, queries, playerID)
-	if err != nil {
-		return err
-	}
 
-	// Inefficient, but should be OK for just 10 item slots.
-	for i := range newSlots {
-		// Only act if the old slot != the new slot.
-		if oldSlots[i] != newSlots[i] {
-			// If the old slot had something, increment it back to the inventory.
-			if oldSlots[i] != 0 {
-				if err := s.incrementConsumableQuantityWith(ctx, queries, playerID, int64(oldSlots[i]), 1); err != nil {
-					return err
-				}
-			}
-
-			// If the new slot has something, decrement it from the inventory.
-			if newSlots[i] != 0 {
-				if _, err := s.decrementConsumableQuantityWith(ctx, queries, playerID, int64(newSlots[i])); err != nil {
-					return fmt.Errorf("set consumables: %w", err)
-				}
-			}
-		}
-	}
+	// TODO: check that there is enough in the inventory
 
 	ret, err := queries.SetPlayerConsumables(ctx, dbmodels.SetPlayerConsumablesParams{
 		PlayerID:    playerID,
@@ -506,6 +526,76 @@ func (s *Service) PurchaseItem(ctx context.Context, playerID, pangTotal, pointTo
 	}
 
 	return newCurrency, nil
+}
+
+func (s *Service) UseItem(ctx context.Context, playerID, itemTypeID int64, player *dbmodels.GetPlayerRow) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	queries := s.queries.WithTx(tx)
+
+	_, err = s.decrementConsumableQuantityWith(ctx, queries, playerID, itemTypeID)
+	if err != nil {
+		return err
+	}
+
+	slots, err := s.getConsumablesWith(ctx, queries, playerID)
+	if err != nil {
+		return err
+	}
+	for i := 9; i >= 0; i-- {
+		if slots[i] == uint32(itemTypeID) {
+			slots[i] = 0
+			break
+		}
+	}
+	ret, err := s.setConsumablesWith(ctx, queries, playerID, slots)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	s.updateConsumables(player, ret)
+
+	return nil
+}
+
+func (s *Service) AddPang(ctx context.Context, playerID, pang int64) (int64, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	queries := s.queries.WithTx(tx)
+
+	currency, err := queries.GetPlayerCurrency(ctx, playerID)
+	if err != nil {
+		return 0, err
+	}
+
+	newCurrency, err := queries.SetPlayerCurrency(ctx, dbmodels.SetPlayerCurrencyParams{
+		PlayerID: playerID,
+		Pang:     currency.Pang + pang,
+		Points:   currency.Points,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return 0, err
+	}
+
+	return newCurrency.Pang, nil
 }
 
 type DecorationTypeIDs struct {

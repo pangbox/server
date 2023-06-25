@@ -398,7 +398,7 @@ type ClientPauseGame struct {
 
 type ClientHoleEnd struct {
 	ClientMessage_
-	// TODO
+	Stats pangya.PlayerStats
 }
 
 // ClientSetIdleStatus sets whether or not the client is idle in a room.
