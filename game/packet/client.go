@@ -63,6 +63,7 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x0042: &ClientShotArrow{},
 	0x0043: &ClientRequestServerList{},
 	0x0048: &ClientLoadProgress{},
+	0x004F: &Client004F{},
 	0x0063: &ClientRoomLoungeAction{},
 	0x0069: &ClientUserMacrosSet{},
 	0x0081: &ClientMultiplayerJoin{},
@@ -363,6 +364,11 @@ type ClientRequestServerList struct {
 type ClientLoadProgress struct {
 	ClientMessage_
 	Progress uint8
+}
+
+// Client004F is sent when the client gags you from chatting due to typing too much or too many obscenities
+type Client004F struct {
+	ClientMessage_
 }
 
 // ClientRoomLoungeAction

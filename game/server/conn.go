@@ -644,6 +644,8 @@ func (c *Conn) Handle(ctx context.Context) error {
 			c.sendInventory(ctx)
 			c.fetchCharacters(ctx)
 			c.sendCharacterData(ctx)
+		case *gamepacket.Client004F:
+			// ignore
 		default:
 			return fmt.Errorf("unexpected message: %T", t)
 		}
