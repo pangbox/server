@@ -133,8 +133,18 @@ func main() {
 
 	err = restruct.Unpack(packet[2:], binary.LittleEndian, message)
 	if err != nil {
-		log.Fatalf("Error parsing packet: %v; partial result: %#v; data: % 02x", err, message, packet)
+		log.Fatalf("Error parsing packet: %v; partial result: %s; data: % 02x", err, spew.Sdump(message), packet)
 	}
 
 	spew.Dump(message)
+
+	sz, err := restruct.SizeOf(message)
+	if err != nil {
+		log.Fatalf("Error getting packet size: %v", err)
+	}
+
+	if sz != len(packet[2:]) {
+		extra := len(packet[2:]) - sz
+		log.Printf("WARNING: %d (%08x) extra bytes... (%d total, %d parsed)", extra, extra, len(packet[2:]), sz)
+	}
 }
