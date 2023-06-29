@@ -69,6 +69,12 @@ func (c *Conn) getRoomPlayer() *gamemodel.RoomPlayerEntry {
 		StatusFlags:      0,
 		GuildEmblemImage: "guildmark", // TODO
 		PlayerID:         uint32(c.player.PlayerID),
+		BackgroundTypeID: uint32(c.player.BackgroundTypeID.Int64),
+		FrameTypeID:      uint32(c.player.FrameTypeID.Int64),
+		StickerTypeID:    uint32(c.player.StickerTypeID.Int64),
+		SlotTypeID:       uint32(c.player.SlotTypeID.Int64),
+		CutInTypeID:      uint32(c.player.CutInTypeID.Int64),
+		TitleTypeID:      uint32(c.player.TitleTypeID.Int64),
 		CharacterData:    c.getPlayerEquippedCharacter(),
 	}
 }

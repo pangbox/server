@@ -38,42 +38,42 @@ const (
 )
 
 type RoomPlayerEntry struct {
-	ConnID            uint32
-	Nickname          string `struct:"[22]byte"`
-	GuildName         string `struct:"[17]byte"`
-	Slot              uint8
-	PlayerFlags       uint32 // (I think GM flag goes here!)
-	TitleID           uint32
-	CharTypeID        uint32
-	PortraitBGID      uint32
-	PortraitFrameID   uint32
-	PortraitStickerID uint32
-	PortraitSlotID    uint32
-	SlotCutInID       uint32
-	SlotRankBannerID  uint32
-	StatusFlags       RoomStatusFlag
-	Rank              uint8
-	Unknown           uint16
-	GuildID           uint32
-	GuildEmblemImage  string `struct:"[12]byte"`
-	PlayerID          uint32
-	Unknown2          uint32
-	Unknown3          uint8 // <-- suspect, this may not be in the right place
-	LoungeState       uint32
-	Unknown4          uint16
-	X                 float32
-	Y                 float32
-	Z                 float32
-	Angle             float32
-	Unknown5          uint32
-	ShopUnknown       uint32
-	ShopName          string `struct:"[64]byte"`
-	MascotTypeID      uint32
-	GlobalID          string `struct:"[22]byte"`
-	Unknown6          [106]byte
-	Guest             bool `struct:"byte"`
-	AverageScore      float32
-	CharacterData     pangya.PlayerCharacterData
+	ConnID           uint32
+	Nickname         string `struct:"[22]byte"`
+	GuildName        string `struct:"[17]byte"`
+	Slot             uint8
+	PlayerFlags      uint32 // (I think GM flag goes here!)
+	TitleID          uint32
+	CharTypeID       uint32
+	BackgroundTypeID uint32
+	FrameTypeID      uint32
+	StickerTypeID    uint32
+	SlotTypeID       uint32
+	CutInTypeID      uint32
+	TitleTypeID      uint32
+	StatusFlags      RoomStatusFlag
+	Rank             uint8
+	Unknown          uint16
+	GuildID          uint32
+	GuildEmblemImage string `struct:"[12]byte"`
+	PlayerID         uint32
+	Unknown2         uint32
+	Unknown3         uint8 // <-- suspect, this may not be in the right place
+	LoungeState      uint32
+	Unknown4         uint16
+	X                float32
+	Y                float32
+	Z                float32
+	Angle            float32
+	Unknown5         uint32
+	ShopUnknown      uint32
+	ShopName         string `struct:"[64]byte"`
+	MascotTypeID     uint32
+	GlobalID         string `struct:"[22]byte"`
+	Unknown6         [106]byte
+	Guest            bool `struct:"byte"`
+	AverageScore     float32
+	CharacterData    pangya.PlayerCharacterData
 }
 
 type RoomActionRotation struct {

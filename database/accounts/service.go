@@ -22,13 +22,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/pangbox/server/common/hash"
 	"github.com/pangbox/server/gen/dbmodels"
 	"github.com/pangbox/server/pangya"
+	log "github.com/sirupsen/logrus"
 )
 
 // Enumeration of possible errors that can be returned from authenticate.
@@ -619,6 +619,7 @@ func (s *Service) getDecorationIDWith(ctx context.Context, tx *dbmodels.Queries,
 		return sql.NullInt64{}, err
 	}
 	if len(items) == 0 {
+		log.Warningf("missing decoration 0x%08x", typeID)
 		return sql.NullInt64{}, nil
 	}
 	return sql.NullInt64{Valid: true, Int64: items[0].ItemID}, nil
@@ -663,14 +664,18 @@ func (s *Service) SetDecoration(ctx context.Context, playerId int64, decoration 
 		return err
 	}
 
-	queries.SetPlayerDecoration(ctx, dbmodels.SetPlayerDecorationParams{
+	_, err = queries.SetPlayerDecoration(ctx, dbmodels.SetPlayerDecorationParams{
 		BackgroundID: backgroundID,
 		FrameID:      frameID,
 		StickerID:    stickerID,
 		SlotID:       slotID,
 		CutInID:      cutInID,
 		TitleID:      titleID,
+		PlayerID:     playerId,
 	})
+	if err != nil {
+		return err
+	}
 
 	err = tx.Commit()
 	if err != nil {
