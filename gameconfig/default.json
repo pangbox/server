@@ -24,5 +24,24 @@
         {"CourseID": 19, "CourseName": "Wiz City", "BonusRate": 40},
         {"CourseID": 20, "CourseName": "Abbot Mine", "BonusRate": 40},
         {"CourseID": 64, "CourseName": "Grand Zodiac", "BonusRate": 20}
+    ],
+    "PapelShopOdds": [
+        {"TypeID":402653184,"Weight":100, "Rarity":0},
+        {"TypeID":402653185,"Weight":100, "Rarity":0},
+        {"TypeID":402653188,"Weight":90, "Rarity":0},
+        {"TypeID":402653188,"Weight":90, "Rarity":0},
+        {"TypeID":402653192,"Weight":150, "Rarity":0},
+        {"TypeID":402653191,"Weight":150, "Rarity":0},
+        {"TypeID":436207657,"Weight":20, "Rarity":0},
+        {"TypeID":402653190,"Weight":20, "Rarity":1},
+        {"TypeID":335544321,"Weight":20, "Rarity":1},
+        {"TypeID":402653193,"Weight":20, "Rarity":1},
+        {"TypeID":335544322,"Weight":20, "Rarity":1},
+        {"TypeID":335544323,"Weight":20, "Rarity":1},
+        {"TypeID":335544325,"Weight":20, "Rarity":1},
+        {"TypeID":436207616,"Weight":35, "Rarity":1},
+        {"TypeID":402653194,"Weight":20, "Rarity":1},
+        {"TypeID":402653195,"Weight":20, "Rarity":1},
+        {"TypeID":135544902,"Weight":2, "Rarity":2}
     ]
 }

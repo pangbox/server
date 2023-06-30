@@ -21,6 +21,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/pangbox/server/common"
 	"github.com/pangbox/server/database/accounts"
@@ -416,6 +418,123 @@ func (c *Conn) Handle(ctx context.Context) error {
 			})
 		case *gamepacket.Client0088:
 			// Unknown tutorial-related message.
+		case *gamepacket.ClientRareShopOpen:
+			c.SendMessage(ctx, &gamepacket.ServerRareShopOpen{
+				UnknownA: 50, // Prevents "No Draws Left" bug with Big Papel Shop
+			})
+
+		case *gamepacket.ClientAchievementStatusRequest:
+			c.SendMessage(ctx, &gamepacket.ServerAchievementStatusResponse{
+				// TODO: Actually support achievements.  This is the bare minimum not to hang/crash the game.
+				Remaining: 1,
+				Count:     1,
+				Groups: []gamepacket.AchievementGroup{
+					{
+						GroupID: 0x4c80002d,
+						ID:      248388034,
+						Count:   5,
+						Achievements: []gamepacket.Achievement{
+							{
+								ID:        0x7480087c,
+								Value:     1,
+								Timestamp: uint32(time.Date(2018, 11, 3, 0, 25, 10, 0, time.UTC).Unix()),
+							},
+							{
+								ID:        0x7480087d,
+								Value:     3,
+								Timestamp: uint32(time.Date(2018, 11, 7, 2, 5, 26, 0, time.UTC).Unix()),
+							},
+							{
+								ID:        0x7480087e,
+								Value:     5,
+								Timestamp: uint32(time.Date(2018, 11, 7, 3, 3, 45, 0, time.UTC).Unix()),
+							},
+							{
+								ID:        0x7480087f,
+								Value:     7,
+								Timestamp: uint32(time.Date(2018, 11, 8, 23, 27, 19, 0, time.UTC).Unix()),
+							},
+							{
+								ID:        0x74800880,
+								Value:     10,
+								Timestamp: uint32(time.Date(2019, 8, 25, 19, 39, 45, 0, time.UTC).Unix()),
+							},
+						},
+					},
+				},
+			})
+			c.SendMessage(ctx, &gamepacket.ServerAchievementUnknownResponse{
+				UnknownA: [4]byte{0x00, 0x00, 0x00, 0x00},
+			})
+		case *gamepacket.ClientBigPapelPlay:
+			c.SendMessage(ctx, &gamepacket.ServerBlackPapelResponse{
+				RemainingTurns: 50, // Displays as remaining turns in the box.
+				UnknownA:       -1,
+			})
+			// TODO make Pang interaction transactional
+			// TODO make items show up in inventory
+			// TODO make sure not to subtract pang if a ticket is used.
+			// TODO Fix pang able to go negative.
+			c.player.Pang, err = c.s.accountsService.AddPang(ctx, c.player.PlayerID, -10000)
+			if err != nil {
+				return err
+			}
+			packet := &gamepacket.ServerBigPapelWinnings{}
+			const BigPapelItems = 10 // Unknown if this is actually how the number of items are actually chosen.
+			itemQuantities := make(map[uint32]int)
+			for i := 0; i < BigPapelItems; i++ {
+				typeID := c.s.papelShop.Choose()
+				rarity := c.s.papelRarity[typeID]
+				if rarity == 2 {
+					itemQuantities[typeID] = 1 // Technically should be possible to get multiple of the same rare item here.
+				} else {
+					itemQuantities[typeID] += 1 + rand.Intn(2)
+				}
+			}
+			for typeID, quantity := range itemQuantities {
+				item := gamepacket.ServerBlackPapelItems{}
+				item.ItemTypeID = typeID
+				item.Quantity = uint32(quantity)
+				packet.Items = append(packet.Items, item)
+			}
+			packet.PangsRemaining = uint64(c.player.Pang)     // This should be calculated by player data
+			packet.CookiesRemaining = uint64(c.player.Points) // Cookies remaining even if the action doesn't cost cookies
+			c.SendMessage(ctx, packet)
+		case *gamepacket.ClientBlackPapelPlay:
+			// TODO make Pang interaction transactional.
+			// TODO make items show up in inventory.
+			// TODO make sure not to subtract pang if a ticket is used.
+			c.player.Pang, err = c.s.accountsService.AddPang(ctx, c.player.PlayerID, -500)
+			if err != nil {
+				return err
+			}
+			packet := &gamepacket.ServerBlackPapelWinnings{}
+			drawnItemsSet := make(map[uint32]struct{})
+			for i := rand.Intn(4) + 1; i > 0; {
+				item := gamepacket.ServerBlackPapelItems{}
+				var typeID uint32
+				for {
+					typeID = c.s.papelShop.Choose()
+					if _, ok := drawnItemsSet[typeID]; !ok {
+						drawnItemsSet[typeID] = struct{}{}
+						break
+					}
+				}
+				item.ItemTypeID = typeID
+				item.DolfiniBallColor = uint32(rand.Intn(3))
+				item.Rarity = c.s.papelRarity[typeID]
+				if item.Rarity == 2 {
+					item.Quantity = 1
+				} else {
+					item.Quantity = uint32(rand.Intn(3) + 1)
+				}
+				packet.UniqueItemsWon += 1
+				packet.Items = append(packet.Items, item)
+				i--
+			}
+			packet.PangsRemaining = uint64(c.player.Pang)
+			packet.CookiesRemaining = uint64(c.player.Points)
+			c.SendMessage(ctx, packet)
 		case *gamepacket.ClientRoomUserEquipmentChange:
 			// TODO
 		case *gamepacket.ClientTutorialStart:
