@@ -54,7 +54,7 @@ type PlayerStats struct {
 	LongestPutt       float32
 	LongestChip       float32
 	TotalXP           uint32
-	Level             byte
+	Rank              byte
 	Pang              uint64
 	TotalScore        int32
 	DifficultyScore   [5]uint8
