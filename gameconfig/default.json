@@ -20,7 +20,7 @@
         {"CourseID": 15, "CourseName": "Lost Seaway", "BonusRate": 20},
         {"CourseID": 16, "CourseName": "Eastern Valley", "BonusRate": 20},
         {"CourseID": 17, "CourseName": "Chronicle 1. Chaos", "BonusRate": 20},
-        {"CourseID": 18, "CourseName": "Ice Inferno", "BonusRate": 20},
+        {"CourseID": 18, "CourseName": "Ice Inferno", "BonusRate": 70},
         {"CourseID": 19, "CourseName": "Wiz City", "BonusRate": 20},
         {"CourseID": 20, "CourseName": "Abbot Mine", "BonusRate": 20},
         {"CourseID": 64, "CourseName": "Grand Zodiac", "BonusRate": 20}
