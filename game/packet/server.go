@@ -925,7 +925,7 @@ type ServerBlackPapelWinnings struct {
 	UniqueItemsWon          uint32 `struct:"sizeof=Items"`
 	Items                   []ServerBlackPapelItems
 	PangsRemaining          uint64
-	CookiesRemaining        uint64 //not filled in but seems correct
+	CookiesRemaining        uint64 // not filled in but seems correct
 }
 
 type ServerBlackPapelResponse struct {
