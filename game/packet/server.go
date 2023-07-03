@@ -73,6 +73,8 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x00F1: &ServerMessageConnect{},
 	0x00F5: &ServerMultiplayerJoined{},
 	0x00F6: &ServerMultiplayerLeft{},
+	0x00FB: &ServerBlackPapelResponse{},
+	0x010B: &ServerRareShopOpen{},
 	0x010E: &ServerPlayerHistory{},
 	0x011F: &ServerTutorialStatus{},
 	0x012B: &ServerMyRoomEntered{},
@@ -89,13 +91,17 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x0211: &ServerInboxList{},
 	0x0212: &ServerMailMessage{},
 	0x0216: &ServerUserStatusUpdate{},
+	0x021B: &ServerBlackPapelWinnings{},
 	0x021D: &ServerAchievementProgress{},
+	0x022C: &ServerAchievementUnknownResponse{},
+	0x022D: &ServerAchievementStatusResponse{},
 	0x0230: &Server0230{},
 	0x0231: &Server0231{},
 	0x0248: &ServerLoginBonusStatus{},
 	0x0250: &ServerEventLobbyJoined{},
 	0x0251: &ServerEventLobbyLeft{},
 	0x026A: &ServerAssistModeToggled{},
+	0x026C: &ServerBigPapelWinnings{},
 })
 
 // ConnectMessage is the message sent upon connecting.
@@ -250,6 +256,39 @@ type GamePlayer struct {
 	NumCards   uint8
 }
 
+type ServerRareShopOpen struct {
+	ServerMessage_
+	UnknownA int32
+	UnknownB int32
+	UnknownC uint32
+}
+
+type Achievement struct {
+	ID        uint32
+	Value     uint32
+	Timestamp uint32
+}
+
+type AchievementGroup struct {
+	GroupID      uint32
+	ID           uint32
+	Count        uint32 `struct:"sizeof=Achievements"`
+	Achievements []Achievement
+}
+
+type ServerAchievementStatusResponse struct {
+	ServerMessage_
+	Status    uint32
+	Remaining uint32
+	Count     uint32 `struct:"sizeof=Groups"`
+	Groups    []AchievementGroup
+}
+
+type ServerAchievementUnknownResponse struct {
+	ServerMessage_
+	UnknownA [4]byte
+}
+
 type GameInitFull struct {
 	NumPlayers byte `struct:"sizeof=Players"`
 	Players    []GamePlayer
@@ -299,7 +338,7 @@ type ServerRoomAction struct {
 	gamemodel.RoomAction
 }
 
-// ServerPangBalanceData is sent after a pang purchase succeeds.
+// ServerPangBalanceData is sent after a pang purchase succeeds.  Sometimes Pang Spent is not set like on Black Papel Transactions.
 type ServerPangBalanceData struct {
 	ServerMessage_
 	PangsRemaining uint64
@@ -877,4 +916,38 @@ type ServerEventLobbyLeft struct {
 type ServerAssistModeToggled struct {
 	ServerMessage_
 	Unknown uint32
+}
+
+type ServerBlackPapelWinnings struct {
+	ServerMessage_
+	Status                  uint32
+	BlackPapelInvTicketSlot uint32
+	UniqueItemsWon          uint32 `struct:"sizeof=Items"`
+	Items                   []ServerBlackPapelItems
+	PangsRemaining          uint64
+	CookiesRemaining        uint64 // not filled in but seems correct
+}
+
+type ServerBlackPapelResponse struct {
+	ServerMessage_
+	RemainingTurns int32
+	UnknownA       int32
+}
+
+type ServerBlackPapelItems struct {
+	DolfiniBallColor uint32
+	ItemTypeID       uint32
+	InventorySlot    uint32
+	Quantity         uint32
+	Rarity           uint32
+}
+
+type ServerBigPapelWinnings struct {
+	ServerMessage_
+	Status                  uint32
+	BlackPapelInvTicketSlot uint32
+	UniqueItemsWon          uint32 `struct:"sizeof=Items"`
+	Items                   []ServerBlackPapelItems
+	PangsRemaining          uint64
+	CookiesRemaining        uint64
 }

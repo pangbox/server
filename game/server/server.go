@@ -52,11 +52,19 @@ type Server struct {
 	configProvider  gameconfig.Provider
 	lobby           *room.Lobby
 	logger          *log.Entry
+	papelShop       *WeightedRand
+	papelRarity     map[uint32]uint32
 }
 
 // New creates a new instance of the game server.
 func New(opts Options) *Server {
 	logger := log.WithField("server", "GameServer")
+	papelShop := NewWeightedRand()
+	papelRarity := make(map[uint32]uint32)
+	for _, item := range opts.ConfigProvider.GetPapelShopOdds() {
+		papelShop.Add(item.TypeID, item.Weight)
+		papelRarity[item.TypeID] = uint32(item.Rarity)
+	}
 	return &Server{
 		baseServer:      &common.BaseServer{},
 		topologyClient:  opts.TopologyClient,
@@ -66,6 +74,8 @@ func New(opts Options) *Server {
 		channelName:     opts.ChannelName,
 		configProvider:  opts.ConfigProvider,
 		logger:          logger,
+		papelShop:       papelShop,
+		papelRarity:     papelRarity,
 	}
 }
 

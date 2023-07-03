@@ -70,6 +70,7 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x0082: &ClientMultiplayerLeave{},
 	0x0088: &Client0088{},
 	0x008B: &ClientRequestMessengerList{},
+	0x0098: &ClientRareShopOpen{},
 	0x009C: &ClientRequestPlayerHistory{},
 	0x00AE: &ClientTutorialClear{},
 	0x00B5: &ClientEnterMyRoom{},
@@ -81,10 +82,13 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x0140: &ClientShopJoin{},
 	0x0143: &ClientRequestInboxList{},
 	0x0144: &ClientRequestInboxMessage{},
+	0x014B: &ClientBlackPapelPlay{},
+	0x0157: &ClientAchievementStatusRequest{},
 	0x016E: &ClientRequestDailyReward{},
 	0x0176: &ClientEventLobbyJoin{},
 	0x0177: &ClientEventLobbyLeave{},
 	0x0184: &ClientAssistModeToggle{},
+	0x0186: &ClientBigPapelPlay{},
 })
 
 // ClientAuth is a message sent to authenticate a session.
@@ -110,6 +114,11 @@ type ClientGetUserOnlineStatus struct {
 	ClientMessage_
 	Unknown  uint8
 	Username common.PString
+}
+
+// ClientRareShopOpen notifies the server if a user opens the rare shop menu.
+type ClientRareShopOpen struct {
+	ClientMessage_
 }
 
 // ClientRoomEdit is sent when the client changes room settings.
@@ -383,6 +392,12 @@ type ClientRequestMessengerList struct {
 	ClientMessage_
 }
 
+// ClientAchievementStatusRequest requests Achievement Status for a user.
+type ClientAchievementStatusRequest struct {
+	ClientMessage_
+	UserID uint32
+}
+
 // ClientGetUserData is a message sent by the client to request
 // the client state.
 type ClientGetUserData struct {
@@ -515,5 +530,13 @@ type ClientLockerInventoryRequest struct {
 }
 
 type Client00FE struct {
+	ClientMessage_
+}
+
+type ClientBlackPapelPlay struct {
+	ClientMessage_
+}
+
+type ClientBigPapelPlay struct {
 	ClientMessage_
 }
