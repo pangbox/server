@@ -28,6 +28,7 @@ import (
 	"github.com/pangbox/server/database/accounts"
 	gamemodel "github.com/pangbox/server/game/model"
 	gamepacket "github.com/pangbox/server/game/packet"
+	"github.com/pangbox/server/gameconfig"
 	log "github.com/sirupsen/logrus"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"golang.org/x/sync/errgroup"
@@ -35,10 +36,11 @@ import (
 
 type Lobby struct {
 	actor.Base[LobbyEvent]
-	logger   *log.Entry
-	storage  *Storage
-	players  *orderedmap.OrderedMap[uint32, *LobbyPlayer]
-	accounts *accounts.Service
+	logger         *log.Entry
+	storage        *Storage
+	players        *orderedmap.OrderedMap[uint32, *LobbyPlayer]
+	accounts       *accounts.Service
+	configProvider gameconfig.Provider
 }
 
 type LobbyPlayer struct {
@@ -47,12 +49,13 @@ type LobbyPlayer struct {
 	Joined time.Time
 }
 
-func NewLobby(ctx context.Context, logger *log.Entry, accounts *accounts.Service) *Lobby {
+func NewLobby(ctx context.Context, logger *log.Entry, accounts *accounts.Service, configProvider gameconfig.Provider) *Lobby {
 	lobby := &Lobby{
-		logger:   logger,
-		storage:  new(Storage),
-		players:  orderedmap.New[uint32, *LobbyPlayer](),
-		accounts: accounts,
+		logger:         logger,
+		storage:        new(Storage),
+		players:        orderedmap.New[uint32, *LobbyPlayer](),
+		accounts:       accounts,
+		configProvider: configProvider,
 	}
 	lobby.TryStart(ctx, lobby.task)
 	return lobby

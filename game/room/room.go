@@ -582,63 +582,55 @@ func (r *Room) handleRoomGameTurnEnd(ctx context.Context, event RoomGameTurnEnd)
 		if nextPlayer == nil {
 			r.state.CurrentHole++
 			if r.state.CurrentHole > r.state.NumHoles {
-				for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
-					r.broadcast(ctx, &gamepacket.ServerEvent{
-						Type: gamepacket.GameEndEvent,
-						Data: gamepacket.ChatMessage{
-							Nickname: common.ToPString(pair.Value.Entry.Nickname),
-						},
-						GameEnd: &gamepacket.GameEnd{
-							Score: 0, // ?
-							Pang:  pair.Value.Pang,
-						},
-					})
-					results := &gamepacket.ServerRoomFinishGame{
-						NumPlayers: uint8(r.players.Len()),
-						Standings:  make([]gamepacket.PlayerGameResult, r.players.Len()),
-					}
-					for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
-						results.Standings[i].ConnID = pair.Value.Entry.ConnID
-						results.Standings[i].Pang = pair.Value.Pang
-						results.Standings[i].Score = int8(pair.Value.Score)
-						results.Standings[i].BonusPang = pair.Value.BonusPang
-
-						newPang, err := r.accounts.AddPang(ctx, int64(pair.Value.Entry.PlayerID), int64(pair.Value.Pang+pair.Value.BonusPang))
-						if err != nil {
-							log.WithError(err).Error("failed giving game-ending pang")
-						}
-
-						if err := pair.Value.Conn.SendMessage(ctx, &gamepacket.ServerPangBalanceData{PangsRemaining: uint64(newPang)}); err != nil {
-							log.WithError(err).Error("failed informing player of game-ending pang")
-						}
-
-						// reset game state now
-						pair.Value.Score = 0
-						pair.Value.Pang = 0
-						pair.Value.BonusPang = 0
-						pair.Value.GameState.HoleEnd = false
-						pair.Value.GameState.ShotSync = nil
-
-						i++
-					}
-					slices.SortFunc(results.Standings, func(a, b gamepacket.PlayerGameResult) bool {
-						return a.Score < b.Score
-					})
-					results.Standings[0].Place = 1
-					for i := 1; i < len(results.Standings); i++ {
-						if results.Standings[i-1].Score == results.Standings[i].Score {
-							// If tie: use placement of tied player(s)
-							results.Standings[i].Place = results.Standings[i-1].Place
-						} else {
-							// If not tie: use position in standing as placement
-							results.Standings[i].Place = uint8(i + 1)
-						}
-					}
-					r.broadcast(ctx, results)
-					r.state.Open = true
-					r.state.CurrentHole = 0
-					r.state.GamePhase = gamemodel.LobbyPhase
+				results := &gamepacket.ServerRoomFinishGame{
+					NumPlayers: uint8(r.players.Len()),
+					Standings:  make([]gamepacket.PlayerGameResult, r.players.Len()),
 				}
+				for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
+					bonusPang := pair.Value.BonusPang
+					bonusPang += r.lobby.configProvider.GetCourseBonus()
+					results.Standings[i].ConnID = pair.Value.Entry.ConnID
+					results.Standings[i].Pang = pair.Value.Pang
+					results.Standings[i].Score = int8(pair.Value.Score)
+					results.Standings[i].BonusPang = bonusPang
+
+					totalPang := bonusPang + pair.Value.Pang
+
+					newPang, err := r.accounts.AddPang(ctx, int64(pair.Value.Entry.PlayerID), int64(totalPang))
+					if err != nil {
+						log.WithError(err).Error("failed giving game-ending pang")
+					}
+
+					if err := pair.Value.Conn.SendMessage(ctx, &gamepacket.ServerPangBalanceData{PangsRemaining: uint64(newPang)}); err != nil {
+						log.WithError(err).Error("failed informing player of game-ending pang")
+					}
+
+					// reset game state now
+					pair.Value.Score = 0
+					pair.Value.Pang = 0
+					pair.Value.BonusPang = 0
+					pair.Value.GameState.HoleEnd = false
+					pair.Value.GameState.ShotSync = nil
+
+					i++
+				}
+				slices.SortFunc(results.Standings, func(a, b gamepacket.PlayerGameResult) bool {
+					return a.Score < b.Score
+				})
+				results.Standings[0].Place = 1
+				for i := 1; i < len(results.Standings); i++ {
+					if results.Standings[i-1].Score == results.Standings[i].Score {
+						// If tie: use placement of tied player(s)
+						results.Standings[i].Place = results.Standings[i-1].Place
+					} else {
+						// If not tie: use position in standing as placement
+						results.Standings[i].Place = uint8(i + 1)
+					}
+				}
+				r.broadcast(ctx, results)
+				r.state.Open = true
+				r.state.CurrentHole = 0
+				r.state.GamePhase = gamemodel.LobbyPhase
 			} else {
 				r.broadcast(ctx, &gamepacket.ServerRoomFinishHole{})
 				for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
@@ -682,8 +674,8 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 			Data: *r.state.ShotSync,
 		})
 		if pair := r.players.GetPair(r.state.ShotSync.ActiveConnID); pair != nil {
-			pair.Value.Pang += uint64(r.state.ShotSync.Pang)
-			pair.Value.BonusPang += uint64(r.state.ShotSync.BonusPang)
+			pair.Value.Pang = uint64(r.state.ShotSync.Pang)
+			pair.Value.BonusPang = uint64(r.state.ShotSync.BonusPang)
 			pair.Value.Stroke++
 		} else {
 			log.WithField("ConnID", r.state.ShotSync.ActiveConnID).Warn("couldn't find conn")

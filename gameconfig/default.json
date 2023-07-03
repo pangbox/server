@@ -1,5 +1,28 @@
 {
     "DefaultPang": 20000,
     "DefaultClubSetTypeID": 268435553,
-    "CharacterDefaults": []
+    "CharacterDefaults": [],
+    "CourseBonusRate": [
+        {"CourseID": 0, "CourseName": "Blue Lagoon", "BonusRate": 20},
+        {"CourseID": 1, "CourseName": "Blue Water", "BonusRate": 20},
+        {"CourseID": 2, "CourseName": "Sepia Wind", "BonusRate": 20},
+        {"CourseID": 3, "CourseName": "Wind Hill", "BonusRate": 20},
+        {"CourseID": 4, "CourseName": "Wiz Wiz", "BonusRate": 20},
+        {"CourseID": 5, "CourseName": "West Wiz", "BonusRate": 20},
+        {"CourseID": 6, "CourseName": "Blue Moon", "BonusRate": 20},
+        {"CourseID": 7, "CourseName": "Silvia Cannon", "BonusRate": 20},
+        {"CourseID": 8, "CourseName": "Ice Cannon", "BonusRate": 20},
+        {"CourseID": 9, "CourseName": "White Wiz", "BonusRate": 20},
+        {"CourseID": 10, "CourseName": "Shining Sand", "BonusRate": 40},
+        {"CourseID": 11, "CourseName": "Pink Wind", "BonusRate": 20},
+        {"CourseID": 13, "CourseName": "Deep Inferno", "BonusRate": 20},
+        {"CourseID": 14, "CourseName": "Ice Spa", "BonusRate": 20},
+        {"CourseID": 15, "CourseName": "Lost Seaway", "BonusRate": 20},
+        {"CourseID": 16, "CourseName": "Eastern Valley", "BonusRate": 20},
+        {"CourseID": 17, "CourseName": "Chronicle 1. Chaos", "BonusRate": 20},
+        {"CourseID": 18, "CourseName": "Ice Inferno", "BonusRate": 20},
+        {"CourseID": 19, "CourseName": "Wiz City", "BonusRate": 20},
+        {"CourseID": 20, "CourseName": "Abbot Mine", "BonusRate": 20},
+        {"CourseID": 64, "CourseName": "Grand Zodiac", "BonusRate": 20}
+    ]
 }

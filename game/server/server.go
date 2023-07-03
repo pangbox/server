@@ -71,7 +71,7 @@ func New(opts Options) *Server {
 
 // Listen listens for connections on a given address and blocks indefinitely.
 func (s *Server) Listen(ctx context.Context, addr string) error {
-	s.lobby = room.NewLobby(ctx, s.logger, s.accountsService)
+	s.lobby = room.NewLobby(ctx, s.logger, s.accountsService, s.configProvider)
 	return s.baseServer.Listen(s.logger, addr, func(logger *log.Entry, socket net.Conn) error {
 		conn := Conn{
 			ServerConn: common.NewServerConn(

@@ -26,6 +26,7 @@ type Provider interface {
 	GetCharacterDefaults(id uint8) CharacterDefaults
 	GetDefaultClubSetTypeID() uint32
 	GetDefaultPang() uint64
+	GetCourseBonus(course uint8, numPlayers, numHoles int) uint64
 }
 
 type CharacterDefaults struct {
@@ -33,16 +34,24 @@ type CharacterDefaults struct {
 	DefaultPartTypeIDs [24]uint32 `json:"DefaultPartTypeIDs"`
 }
 
+type CourseBonusRate struct {
+	CourseID   uint8
+	CourseName string
+	BonusRate  int
+}
+
 type Manifest struct {
 	CharacterDefaults    []CharacterDefaults `json:"CharacterDefaults"`
 	DefaultClubSetTypeID uint32              `json:"DefaultClubSetTypeID"`
 	DefaultPang          uint64              `json:"DefaultPang"`
+	CourseBonusRate      []CourseBonusRate   `json:"CourseBonusRate"`
 }
 
 type configFileProvider struct {
 	characterDefaults    map[uint8]CharacterDefaults
 	defaultClubSetTypeID uint32
 	defaultPang          uint64
+	courseBonusRate      map[uint8]int
 }
 
 func Default() Provider {
@@ -78,9 +87,13 @@ func FromManifest(manifest Manifest) Provider {
 		characterDefaults:    make(map[uint8]CharacterDefaults),
 		defaultClubSetTypeID: manifest.DefaultClubSetTypeID,
 		defaultPang:          manifest.DefaultPang,
+		courseBonusRate:      make(map[uint8]int),
 	}
 	for _, defaults := range manifest.CharacterDefaults {
 		provider.characterDefaults[defaults.CharacterID] = defaults
+	}
+	for _, course := range manifest.CourseBonusRate {
+		provider.courseBonusRate[course.CourseID] = course.BonusRate
 	}
 	return provider
 }
@@ -95,4 +108,15 @@ func (c *configFileProvider) GetDefaultClubSetTypeID() uint32 {
 
 func (c *configFileProvider) GetDefaultPang() uint64 {
 	return c.defaultPang
+}
+
+func (c *configFileProvider) GetCourseBonus(course uint8, numPlayers, numHoles int) uint64 {
+	bonusRate, ok := c.courseBonusRate[course]
+	if !ok {
+		// Should generally not happen...
+		bonusRate = 20
+	}
+
+	// TODO: this is probably only true for versus
+	return uint64(bonusRate * numHoles * (numPlayers - 1))
 }
