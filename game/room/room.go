@@ -588,7 +588,7 @@ func (r *Room) handleRoomGameTurnEnd(ctx context.Context, event RoomGameTurnEnd)
 				}
 				for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
 					bonusPang := pair.Value.BonusPang
-					bonusPang += r.lobby.configProvider.GetCourseBonus()
+					bonusPang += r.lobby.configProvider.GetCourseBonus(r.state.Course, r.players.Len(), int(r.state.NumHoles))
 					results.Standings[i].ConnID = pair.Value.Entry.ConnID
 					results.Standings[i].Pang = pair.Value.Pang
 					results.Standings[i].Score = int8(pair.Value.Score)
