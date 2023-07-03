@@ -471,10 +471,10 @@ func (c *Conn) Handle(ctx context.Context) error {
 				RemainingTurns: 50, // Displays as remaining turns in the box.
 				UnknownA:       -1,
 			})
-			// TODO make Pang interaction transactional
-			// TODO make items show up in inventory
-			// TODO make sure not to subtract pang if a ticket is used.
-			// TODO Fix pang able to go negative.
+			// TODO: make Pang interaction transactional
+			// TODO: make items show up in inventory
+			// TODO: make sure not to subtract pang if a ticket is used.
+			// TODO: Fix pang able to go negative.
 			c.player.Pang, err = c.s.accountsService.AddPang(ctx, c.player.PlayerID, -10000)
 			if err != nil {
 				return err
@@ -501,9 +501,9 @@ func (c *Conn) Handle(ctx context.Context) error {
 			packet.CookiesRemaining = uint64(c.player.Points) // Cookies remaining even if the action doesn't cost cookies
 			c.SendMessage(ctx, packet)
 		case *gamepacket.ClientBlackPapelPlay:
-			// TODO make Pang interaction transactional.
-			// TODO make items show up in inventory.
-			// TODO make sure not to subtract pang if a ticket is used.
+			// TODO: make Pang interaction transactional.
+			// TODO: make items show up in inventory.
+			// TODO: make sure not to subtract pang if a ticket is used.
 			c.player.Pang, err = c.s.accountsService.AddPang(ctx, c.player.PlayerID, -500)
 			if err != nil {
 				return err
