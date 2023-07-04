@@ -119,6 +119,7 @@ type RoomState struct {
 	OwnerConnID     uint32
 	NaturalWind     uint32
 
+	StartPlayers int
 	GamePhase    GamePhase
 	ShotSync     *ShotSyncData
 	Holes        []RoomHole

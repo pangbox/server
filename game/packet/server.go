@@ -605,7 +605,7 @@ type PlayerGameResult struct {
 	Place     uint8
 	Score     int8
 	Unknown   uint8
-	Unknown2  uint16
+	Exp       uint16
 	Pang      uint64
 	BonusPang uint64
 	Unknown3  uint64

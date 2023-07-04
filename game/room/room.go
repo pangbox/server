@@ -50,6 +50,7 @@ type RoomPlayer struct {
 	Entry      *gamemodel.RoomPlayerEntry
 	Conn       *gamepacket.ServerConn
 	PlayerData pangya.PlayerData
+	UpdateFunc func()
 	GameReady  bool
 	ShotSync   *gamemodel.ShotSyncData
 	TurnEnd    bool
@@ -188,6 +189,9 @@ func (r *Room) handleEvent(ctx context.Context, t *actor.Task[RoomEvent], msg ac
 	case RoomPlayerLeave:
 		return rejectOnError(r.handlePlayerLeave(ctx, event))
 
+	case RoomPlayerUpdateData:
+		return rejectOnError(r.handlePlayerUpdateData(ctx, event))
+
 	case RoomAction:
 		return rejectOnError(r.handleRoomAction(ctx, event))
 
@@ -293,6 +297,7 @@ func (r *Room) handlePlayerJoin(ctx context.Context, event RoomPlayerJoin) error
 		Entry:      event.Entry,
 		Conn:       event.Conn,
 		PlayerData: event.PlayerData,
+		UpdateFunc: event.UpdateFunc,
 	})
 	if present {
 		return errors.New("already in room")
@@ -324,6 +329,16 @@ func (r *Room) handlePlayerJoin(ctx context.Context, event RoomPlayerJoin) error
 
 func (r *Room) handlePlayerLeave(ctx context.Context, event RoomPlayerLeave) error {
 	return r.removePlayer(ctx, event.ConnID)
+}
+
+func (r *Room) handlePlayerUpdateData(ctx context.Context, event RoomPlayerUpdateData) error {
+	if pair := r.players.GetPair(event.ConnID); pair != nil {
+		*pair.Value.Entry = *event.Entry
+		pair.Value.PlayerData = event.PlayerData
+		// TODO: only need to send delta here
+		return r.broadcastPlayerList(ctx)
+	}
+	return nil
 }
 
 func (r *Room) handleRoomAction(ctx context.Context, event RoomAction) error {
@@ -471,6 +486,7 @@ func (r *Room) handleRoomStartGame(ctx context.Context, event RoomStartGame) err
 			Players:    make([]gamepacket.GamePlayer, r.players.Len()),
 		},
 	}
+	r.state.StartPlayers = r.players.Len()
 	for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
 		// Clear ready status.
 		pair.Value.Entry.StatusFlags &^= gamemodel.RoomStateReady
@@ -786,12 +802,15 @@ func (r *Room) endGame(ctx context.Context) error {
 		Standings:  make([]gamepacket.PlayerGameResult, r.players.Len()),
 	}
 	for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
+		clearBonus := r.lobby.configProvider.GetCourseBonus(r.state.Course, r.state.StartPlayers, int(r.state.NumHoles))
+		exp := int(clearBonus / 2) // TODO: it should be based on course difficulty I believe.
 		bonusPang := pair.Value.BonusPang
-		bonusPang += r.lobby.configProvider.GetCourseBonus(r.state.Course, r.players.Len(), int(r.state.NumHoles))
+		bonusPang += clearBonus
 		results.Standings[i].ConnID = pair.Value.Entry.ConnID
 		results.Standings[i].Pang = pair.Value.Pang
 		results.Standings[i].Score = int8(pair.Value.Score)
 		results.Standings[i].BonusPang = bonusPang
+		results.Standings[i].Exp = uint16(exp)
 
 		totalPang := bonusPang + pair.Value.Pang
 
@@ -800,9 +819,17 @@ func (r *Room) endGame(ctx context.Context) error {
 			log.WithError(err).Error("failed giving game-ending pang")
 		}
 
+		_, _, err = r.accounts.AddExp(ctx, int64(pair.Value.Entry.PlayerID), exp)
+		if err != nil {
+			log.WithError(err).Error("failed giving game-ending exp")
+		}
+
 		if err := pair.Value.Conn.SendMessage(ctx, &gamepacket.ServerPangBalanceData{PangsRemaining: uint64(newPang)}); err != nil {
 			log.WithError(err).Error("failed informing player of game-ending pang")
 		}
+
+		// Tell conn to update player so that it sees new EXP/etc.
+		pair.Value.UpdateFunc()
 
 		pair.Value.Score = 0
 		pair.Value.Pang = 0
