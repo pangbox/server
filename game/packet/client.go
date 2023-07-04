@@ -60,6 +60,7 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x0032: &ClientSetIdleStatus{},
 	0x0033: &ClientException{},
 	0x0034: &ClientFirstShotReady{},
+	0x0037: &ClientLastPlayerLeaveGame{},
 	0x0042: &ClientShotArrow{},
 	0x0043: &ClientRequestServerList{},
 	0x0048: &ClientLoadProgress{},
@@ -432,6 +433,14 @@ type ClientException struct {
 }
 
 type ClientFirstShotReady struct {
+	ClientMessage_
+}
+
+// ClientLastPlayerLeaveGame is sent when the last player leaves a room.
+// We can't rely on it for much; it just tells us the client thinks it shouldn't
+// be punished for leaving the room since everyone else has already left.
+// In the future it may need to be rejected in some cases.
+type ClientLastPlayerLeaveGame struct {
 	ClientMessage_
 }
 

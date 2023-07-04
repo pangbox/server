@@ -401,6 +401,11 @@ func (c *Conn) Handle(ctx context.Context) error {
 				// TODO: handle error
 				return err
 			}
+		case *gamepacket.ClientLastPlayerLeaveGame:
+			if err := c.leaveRoom(ctx); err != nil {
+				// TODO: handle error
+				return err
+			}
 		case *gamepacket.ClientRoomKick:
 			if c.currentRoom == nil {
 				break
