@@ -94,3 +94,97 @@ const (
 	InfinityLegendB Rank = 0x45
 	InfinityLegendA Rank = 0x46
 )
+
+// RankExperience contains the experience points needed to level up from each
+// rank.
+// TODO: need to ensure this does not differ by version/etc.
+var RankExperience = map[Rank]int{
+	RookieF:         30,
+	RookieE:         40,
+	RookieD:         50,
+	RookieC:         60,
+	RookieB:         70,
+	RookieA:         140,
+	BeginnerE:       105,
+	BeginnerD:       125,
+	BeginnerC:       145,
+	BeginnerB:       165,
+	BeginnerA:       330,
+	JuniorE:         248,
+	JuniorD:         278,
+	JuniorC:         308,
+	JuniorB:         338,
+	JuniorA:         675,
+	SeniorE:         506,
+	SeniorD:         546,
+	SeniorC:         586,
+	SeniorB:         626,
+	SeniorA:         1253,
+	AmateurE:        1002,
+	AmateurD:        1052,
+	AmateurC:        1102,
+	AmateurB:        1152,
+	AmateurA:        2304,
+	SemiProE:        1843,
+	SemiProD:        1903,
+	SemiProC:        1963,
+	SemiProB:        2023,
+	SemiProA:        4046,
+	ProE:            3237,
+	ProD:            3307,
+	ProC:            3377,
+	ProB:            3447,
+	ProA:            6894,
+	NationalProE:    5515,
+	NationalProD:    5595,
+	NationalProC:    5675,
+	NationalProB:    5755,
+	NationalProA:    11511,
+	WorldProE:       8058,
+	WorldProD:       8148,
+	WorldProC:       8238,
+	WorldProB:       8328,
+	WorldProA:       16655,
+	MasterE:         8328,
+	MasterD:         8428,
+	MasterC:         8528,
+	MasterB:         8628,
+	MasterA:         17255,
+	TopMasterE:      9490,
+	TopMasterD:      9690,
+	TopMasterC:      9890,
+	TopMasterB:      10090,
+	TopMasterA:      20181,
+	WorldMasterE:    20181,
+	WorldMasterD:    20481,
+	WorldMasterC:    20781,
+	WorldMasterB:    21081,
+	WorldMasterA:    42161,
+	LegendE:         37945,
+	LegendD:         68301,
+	LegendC:         122942,
+	LegendB:         221296,
+	LegendA:         442592,
+	InfinityLegendE: 663887,
+	InfinityLegendD: 995831,
+	InfinityLegendC: 1493747,
+	InfinityLegendB: 2240620,
+	InfinityLegendA: -1,
+}
+
+func AddExperience(rank Rank, current, amount int) (newRank Rank, newExp int) {
+	sum := current + amount
+	for {
+		rankExp := RankExperience[rank]
+		if rankExp == -1 {
+			// Max rank; no EXP.
+			return rank, 0
+		}
+		if sum >= rankExp {
+			sum -= rankExp
+			rank++
+		} else {
+			return rank, sum
+		}
+	}
+}

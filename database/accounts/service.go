@@ -911,3 +911,35 @@ func (s *Service) DeleteExpiredSessions(ctx context.Context) error {
 func (s *Service) GetPlayerInventory(ctx context.Context, playerID int64) ([]dbmodels.Inventory, error) {
 	return s.queries.GetPlayerInventory(ctx, playerID)
 }
+
+func (s *Service) AddExp(ctx context.Context, playerID int64, add int) (pangya.Rank, int, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer tx.Rollback()
+
+	queries := s.queries.WithTx(tx)
+
+	rank, err := queries.GetPlayerRank(ctx, playerID)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	newRank, newExp := pangya.AddExperience(pangya.Rank(rank.Rank), int(rank.Exp), add)
+	values, err := queries.SetPlayerRank(ctx, dbmodels.SetPlayerRankParams{
+		PlayerID: playerID,
+		Rank:     int64(newRank),
+		Exp:      int64(newExp),
+	})
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return pangya.Rank(values.Rank), int(values.Exp), nil
+}

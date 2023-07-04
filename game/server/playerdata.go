@@ -31,8 +31,9 @@ func (c *Conn) getPlayerInfo() pangya.PlayerInfo {
 
 func (c *Conn) getPlayerStats() pangya.PlayerStats {
 	return pangya.PlayerStats{
-		Pang: uint64(c.player.Pang),
-		Rank: byte(c.player.Rank),
+		Pang:    uint64(c.player.Pang),
+		Rank:    byte(c.player.Rank),
+		TotalXP: uint32(c.player.Exp),
 		// TODO
 	}
 }

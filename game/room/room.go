@@ -50,10 +50,13 @@ type RoomPlayer struct {
 	Entry      *gamemodel.RoomPlayerEntry
 	Conn       *gamepacket.ServerConn
 	PlayerData pangya.PlayerData
+	UpdateFunc func()
 	GameReady  bool
 	ShotSync   *gamemodel.ShotSyncData
 	TurnEnd    bool
 	HoleEnd    bool
+	GameEnd    bool
+	StartShot  bool
 	Pang       uint64
 	BonusPang  uint64
 	LastTotal  int8
@@ -186,6 +189,9 @@ func (r *Room) handleEvent(ctx context.Context, t *actor.Task[RoomEvent], msg ac
 	case RoomPlayerLeave:
 		return rejectOnError(r.handlePlayerLeave(ctx, event))
 
+	case RoomPlayerUpdateData:
+		return rejectOnError(r.handlePlayerUpdateData(ctx, event))
+
 	case RoomAction:
 		return rejectOnError(r.handleRoomAction(ctx, event))
 
@@ -291,6 +297,7 @@ func (r *Room) handlePlayerJoin(ctx context.Context, event RoomPlayerJoin) error
 		Entry:      event.Entry,
 		Conn:       event.Conn,
 		PlayerData: event.PlayerData,
+		UpdateFunc: event.UpdateFunc,
 	})
 	if present {
 		return errors.New("already in room")
@@ -322,6 +329,16 @@ func (r *Room) handlePlayerJoin(ctx context.Context, event RoomPlayerJoin) error
 
 func (r *Room) handlePlayerLeave(ctx context.Context, event RoomPlayerLeave) error {
 	return r.removePlayer(ctx, event.ConnID)
+}
+
+func (r *Room) handlePlayerUpdateData(ctx context.Context, event RoomPlayerUpdateData) error {
+	if pair := r.players.GetPair(event.ConnID); pair != nil {
+		*pair.Value.Entry = *event.Entry
+		pair.Value.PlayerData = event.PlayerData
+		// TODO: only need to send delta here
+		return r.broadcastPlayerList(ctx)
+	}
+	return nil
 }
 
 func (r *Room) handleRoomAction(ctx context.Context, event RoomAction) error {
@@ -469,15 +486,19 @@ func (r *Room) handleRoomStartGame(ctx context.Context, event RoomStartGame) err
 			Players:    make([]gamepacket.GamePlayer, r.players.Len()),
 		},
 	}
+	r.state.StartPlayers = r.players.Len()
 	for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
 		// Clear ready status.
 		pair.Value.Entry.StatusFlags &^= gamemodel.RoomStateReady
 
-		// Set initial turn order.
+		// Set initial player state.
 		pair.Value.TurnOrder = i
 		pair.Value.Distance = math.Inf(1)
 		pair.Value.Stroke = 0
 		pair.Value.LastTotal = 0
+		pair.Value.TurnEnd = false
+		pair.Value.HoleEnd = false
+		pair.Value.GameEnd = false
 
 		player := pair.Value
 		gameInit.Full.Players[i] = gamepacket.GamePlayer{
@@ -635,6 +656,7 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 			Data: *r.state.ShotSync,
 		})
 		if pair := r.players.GetPair(r.state.ShotSync.ActiveConnID); pair != nil {
+			pair.Value.StartShot = true
 			pair.Value.Pang = uint64(r.state.ShotSync.Pang)
 			pair.Value.BonusPang = uint64(r.state.ShotSync.BonusPang)
 
@@ -679,8 +701,20 @@ func (r *Room) endTurn(ctx context.Context) error {
 	r.broadcast(ctx, &gamepacket.ServerRoomShotEnd{
 		ConnID: r.state.ActiveConnID,
 	})
+	if pair := r.players.GetPair(r.state.ActiveConnID); pair != nil {
+		if pair.Value.GameEnd {
+			r.broadcast(ctx, &gamepacket.ServerRoomPlayerFinished{})
+		}
+	}
 	for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
 		pair.Value.TurnEnd = false
+	}
+	return r.nextTurn(ctx)
+}
+
+func (r *Room) nextTurn(ctx context.Context) error {
+	if pair := r.players.GetPair(r.state.ActiveConnID); pair != nil {
+		pair.Value.StartShot = false
 	}
 	nextPlayer := r.getNextPlayer()
 	if nextPlayer == nil {
@@ -724,15 +758,15 @@ func (r *Room) getNextPlayer() *RoomPlayer {
 }
 
 func (r *Room) endHole(ctx context.Context) error {
-	r.state.CurrentHole++
-	if r.state.CurrentHole > r.state.NumHoles {
-		return r.endGame(ctx)
-	} else {
+	if r.haveNextHole() {
+		r.advanceHole()
 		r.broadcast(ctx, &gamepacket.ServerRoomFinishHole{})
 		for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
 			pair.Value.HoleEnd = false
 		}
 		r.setupNextTurnOrder()
+	} else {
+		return r.endGame(ctx)
 	}
 	r.stateUpdated(ctx)
 	return nil
@@ -760,17 +794,23 @@ func (r *Room) setupNextTurnOrder() {
 }
 
 func (r *Room) endGame(ctx context.Context) error {
+	if r.players.Len() == 0 {
+		return nil
+	}
 	results := &gamepacket.ServerRoomFinishGame{
 		NumPlayers: uint8(r.players.Len()),
 		Standings:  make([]gamepacket.PlayerGameResult, r.players.Len()),
 	}
 	for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
+		clearBonus := r.lobby.configProvider.GetCourseBonus(r.state.Course, r.state.StartPlayers, int(r.state.NumHoles))
+		exp := int(clearBonus / 2) // TODO: it should be based on course difficulty I believe.
 		bonusPang := pair.Value.BonusPang
-		bonusPang += r.lobby.configProvider.GetCourseBonus(r.state.Course, r.players.Len(), int(r.state.NumHoles))
+		bonusPang += clearBonus
 		results.Standings[i].ConnID = pair.Value.Entry.ConnID
 		results.Standings[i].Pang = pair.Value.Pang
 		results.Standings[i].Score = int8(pair.Value.Score)
 		results.Standings[i].BonusPang = bonusPang
+		results.Standings[i].Exp = uint16(exp)
 
 		totalPang := bonusPang + pair.Value.Pang
 
@@ -779,9 +819,17 @@ func (r *Room) endGame(ctx context.Context) error {
 			log.WithError(err).Error("failed giving game-ending pang")
 		}
 
+		_, _, err = r.accounts.AddExp(ctx, int64(pair.Value.Entry.PlayerID), exp)
+		if err != nil {
+			log.WithError(err).Error("failed giving game-ending exp")
+		}
+
 		if err := pair.Value.Conn.SendMessage(ctx, &gamepacket.ServerPangBalanceData{PangsRemaining: uint64(newPang)}); err != nil {
 			log.WithError(err).Error("failed informing player of game-ending pang")
 		}
+
+		// Tell conn to update player so that it sees new EXP/etc.
+		pair.Value.UpdateFunc()
 
 		pair.Value.Score = 0
 		pair.Value.Pang = 0
@@ -907,6 +955,12 @@ func (r *Room) removePlayer(ctx context.Context, connID uint32) error {
 			},
 		})
 		r.players.Delete(connID)
+		if r.state.GamePhase == gamemodel.InGame {
+			r.broadcast(ctx, &gamepacket.ServerPlayerQuitGame{ConnID: connID})
+			if r.state.ActiveConnID == connID {
+				r.nextTurn(ctx)
+			}
+		}
 		r.lobby.Send(ctx, LobbyPlayerUpdateRoom{
 			ConnID:     connID,
 			RoomNumber: -1,
@@ -943,17 +997,30 @@ func (r *Room) roomStatus() *gamepacket.ServerRoomStatus {
 		RoomType:        r.state.RoomType,
 		Course:          r.state.Course,
 		NumHoles:        r.state.NumHoles,
-		HoleProgression: 1,
-		NaturalWind:     0,
+		HoleProgression: r.state.HoleProgression,
+		NaturalWind:     r.state.NaturalWind,
 		MaxUsers:        r.state.MaxUsers,
 		ShotTimerMS:     r.state.ShotTimerMS,
 		GameTimerMS:     r.state.GameTimerMS,
-		Flags:           0,
+		Flags:           0, // TODO
 		Owner:           true,
 		RoomName:        common.ToPString(r.state.RoomName),
 	}
 }
 
 func (r *Room) currentHole() *gamemodel.RoomHole {
+	// Note: CurrentHole is 1-based.
 	return &r.state.Holes[r.state.CurrentHole-1]
+}
+
+func (r *Room) haveNextHole() bool {
+	// Note: CurrentHole is 1-based.
+	return r.state.CurrentHole < r.state.NumHoles
+}
+
+func (r *Room) advanceHole() {
+	// Note: CurrentHole is 1-based.
+	if r.state.CurrentHole < r.state.NumHoles {
+		r.state.CurrentHole++
+	}
 }

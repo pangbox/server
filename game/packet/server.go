@@ -46,6 +46,7 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x005B: &ServerRoomSetWind{},
 	0x005D: &ServerRoomUserTypingAnnounce{},
 	0x0060: &ServerRoomShotCometReliefAnnounce{},
+	0x0061: &ServerPlayerQuitGame{},
 	0x0063: &ServerRoomActiveUserAnnounce{},
 	0x0064: &ServerRoomShotSync{},
 	0x0065: &ServerRoomFinishHole{},
@@ -580,6 +581,11 @@ type ServerRoomShotCometReliefAnnounce struct {
 	X, Y, Z float32
 }
 
+type ServerPlayerQuitGame struct {
+	ServerMessage_
+	ConnID uint32
+}
+
 type ServerRoomActiveUserAnnounce struct {
 	ServerMessage_
 	ConnID uint32
@@ -599,7 +605,7 @@ type PlayerGameResult struct {
 	Place     uint8
 	Score     int8
 	Unknown   uint8
-	Unknown2  uint16
+	Exp       uint16
 	Pang      uint64
 	BonusPang uint64
 	Unknown3  uint64

@@ -90,7 +90,8 @@ func (s *Server) Listen(ctx context.Context, addr string) error {
 				gamepacket.ClientMessageTable,
 				gamepacket.ServerMessageTable,
 			),
-			s: s,
+			s:            s,
+			updatePlayer: make(chan struct{}, 1),
 		}
 		return conn.Handle(ctx)
 	})

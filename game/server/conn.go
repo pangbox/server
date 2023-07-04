@@ -38,10 +38,11 @@ type Conn struct {
 	*gamepacket.ServerConn
 	s *Server
 
-	connID     uint32
-	session    dbmodels.Session
-	player     dbmodels.GetPlayerRow
-	characters []pangya.PlayerCharacterData
+	connID       uint32
+	session      dbmodels.Session
+	player       dbmodels.GetPlayerRow
+	characters   []pangya.PlayerCharacterData
+	updatePlayer chan struct{}
 
 	currentCharacter *pangya.PlayerCharacterData
 
@@ -135,6 +136,27 @@ func (c *Conn) Handle(ctx context.Context) error {
 			return fmt.Errorf("reading next message: %w", err)
 		}
 
+		select {
+		case <-c.updatePlayer:
+			c.player, err = c.s.accountsService.GetPlayer(ctx, c.player.PlayerID)
+			if err != nil {
+				return fmt.Errorf("updating player data: %w", err)
+			}
+			if c.currentLobby != nil {
+				c.currentLobby.Send(ctx, room.LobbyPlayerUpdate{
+					Entry: c.getLobbyPlayer(),
+				})
+			}
+			if c.currentRoom != nil {
+				c.currentRoom.Send(ctx, room.RoomPlayerUpdateData{
+					ConnID:     c.connID,
+					Entry:      c.getRoomPlayer(),
+					PlayerData: c.getPlayerData(),
+				})
+			}
+		default:
+		}
+
 		switch t := msg.(type) {
 		case *gamepacket.ClientException:
 			log.WithField("exception", t.Message).Debug("Client exception")
@@ -172,15 +194,16 @@ func (c *Conn) Handle(ctx context.Context) error {
 				break
 			}
 			newRoom, err := c.currentLobby.NewRoom(context.Background(), gamemodel.RoomState{
-				ShotTimerMS: t.ShotTimerMS,
-				GameTimerMS: t.GameTimerMS,
-				MaxUsers:    t.MaxUsers,
-				RoomType:    t.RoomType,
-				NumHoles:    t.NumHoles,
-				Course:      t.Course,
-				RoomName:    t.RoomName.Value,
-				Password:    t.Password.Value,
-				// TODO: natural wind, hole progression, more?
+				ShotTimerMS:     t.ShotTimerMS,
+				GameTimerMS:     t.GameTimerMS,
+				MaxUsers:        t.MaxUsers,
+				RoomType:        t.RoomType,
+				NumHoles:        t.NumHoles,
+				Course:          t.Course,
+				RoomName:        t.RoomName.Value,
+				Password:        t.Password.Value,
+				HoleProgression: t.HoleProgression,
+				// TODO: natural wind, more?
 			})
 			if err != nil {
 				// TODO: handle error
@@ -191,6 +214,12 @@ func (c *Conn) Handle(ctx context.Context) error {
 				Entry:      c.getRoomPlayer(),
 				Conn:       c.ServerConn,
 				PlayerData: c.getPlayerData(),
+				UpdateFunc: func() {
+					select {
+					case c.updatePlayer <- struct{}{}:
+					default:
+					}
+				},
 			})
 		case *gamepacket.ClientAssistModeToggle:
 			c.SendMessage(ctx, &gamepacket.ServerAssistModeToggled{})
@@ -396,6 +425,11 @@ func (c *Conn) Handle(ctx context.Context) error {
 				PinZ: t.PinZ,
 			})
 		case *gamepacket.ClientRoomLeave:
+			if err := c.leaveRoom(ctx); err != nil {
+				// TODO: handle error
+				return err
+			}
+		case *gamepacket.ClientLastPlayerLeaveGame:
 			if err := c.leaveRoom(ctx); err != nil {
 				// TODO: handle error
 				return err
@@ -730,6 +764,15 @@ func (c *Conn) Handle(ctx context.Context) error {
 				}); err != nil {
 					return err
 				}
+			}
+
+			// Update the player data in the room, as well.
+			if c.currentRoom != nil {
+				c.currentRoom.Send(ctx, room.RoomPlayerUpdateData{
+					ConnID:     c.connID,
+					Entry:      c.getRoomPlayer(),
+					PlayerData: c.getPlayerData(),
+				})
 			}
 		case *gamepacket.Client00FE:
 			// TODO

@@ -77,11 +77,19 @@ type RoomPlayerJoin struct {
 	Entry      *gamemodel.RoomPlayerEntry
 	PlayerData pangya.PlayerData
 	Conn       *gamepacket.ServerConn
+	UpdateFunc func()
 }
 
 type RoomPlayerLeave struct {
 	roomEvent
 	ConnID uint32
+}
+
+type RoomPlayerUpdateData struct {
+	roomEvent
+	ConnID     uint32
+	Entry      *gamemodel.RoomPlayerEntry
+	PlayerData pangya.PlayerData
 }
 
 type RoomAction struct {

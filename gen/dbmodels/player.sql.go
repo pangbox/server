@@ -19,7 +19,7 @@ INSERT INTO player (
 ) VALUES (
     ?, ?, ?, ?
 )
-RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id, exp
 `
 
 type CreatePlayerParams struct {
@@ -68,13 +68,14 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (Pla
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 	)
 	return i, err
 }
 
 const getPlayer = `-- name: GetPlayer :one
 SELECT
-    player.player_id, player.username, player.nickname, player.password_hash, player.pang, player.points, player.rank, player.ball_type_id, player.mascot_type_id, player.slot0_type_id, player.slot1_type_id, player.slot2_type_id, player.slot3_type_id, player.slot4_type_id, player.slot5_type_id, player.slot6_type_id, player.slot7_type_id, player.slot8_type_id, player.slot9_type_id, player.caddie_id, player.club_id, player.background_id, player.frame_id, player.sticker_id, player.slot_id, player.cut_in_id, player.title_id, player.poster0_id, player.poster1_id, player.character_id,
+    player.player_id, player.username, player.nickname, player.password_hash, player.pang, player.points, player.rank, player.ball_type_id, player.mascot_type_id, player.slot0_type_id, player.slot1_type_id, player.slot2_type_id, player.slot3_type_id, player.slot4_type_id, player.slot5_type_id, player.slot6_type_id, player.slot7_type_id, player.slot8_type_id, player.slot9_type_id, player.caddie_id, player.club_id, player.background_id, player.frame_id, player.sticker_id, player.slot_id, player.cut_in_id, player.title_id, player.poster0_id, player.poster1_id, player.character_id, player.exp,
     character.character_id, character.player_id, character.item_id, character.hair_color, character.shirt, character.mastery, character.part00_item_id, character.part01_item_id, character.part02_item_id, character.part03_item_id, character.part04_item_id, character.part05_item_id, character.part06_item_id, character.part07_item_id, character.part08_item_id, character.part09_item_id, character.part10_item_id, character.part11_item_id, character.part12_item_id, character.part13_item_id, character.part14_item_id, character.part15_item_id, character.part16_item_id, character.part17_item_id, character.part18_item_id, character.part19_item_id, character.part20_item_id, character.part21_item_id, character.part22_item_id, character.part23_item_id, character.part00_item_type_id, character.part01_item_type_id, character.part02_item_type_id, character.part03_item_type_id, character.part04_item_type_id, character.part05_item_type_id, character.part06_item_type_id, character.part07_item_type_id, character.part08_item_type_id, character.part09_item_type_id, character.part10_item_type_id, character.part11_item_type_id, character.part12_item_type_id, character.part13_item_type_id, character.part14_item_type_id, character.part15_item_type_id, character.part16_item_type_id, character.part17_item_type_id, character.part18_item_type_id, character.part19_item_type_id, character.part20_item_type_id, character.part21_item_type_id, character.part22_item_type_id, character.part23_item_type_id, character.aux_part0_id, character.aux_part1_id, character.aux_part2_id, character.aux_part3_id, character.aux_part4_id, character.cut_in_id,
     inventory_character.item_type_id  AS character_type_id_,
     inventory_caddie.item_type_id     AS caddie_type_id_,
@@ -135,6 +136,7 @@ type GetPlayerRow struct {
 	Poster0ID               sql.NullInt64
 	Poster1ID               sql.NullInt64
 	CharacterID             sql.NullInt64
+	Exp                     int64
 	CharacterID_2           int64
 	PlayerID_2              int64
 	ItemID                  int64
@@ -242,6 +244,7 @@ func (q *Queries) GetPlayer(ctx context.Context, playerID int64) (GetPlayerRow, 
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 		&i.CharacterID_2,
 		&i.PlayerID_2,
 		&i.ItemID,
@@ -318,7 +321,7 @@ func (q *Queries) GetPlayer(ctx context.Context, playerID int64) (GetPlayerRow, 
 }
 
 const getPlayerByUsername = `-- name: GetPlayerByUsername :one
-SELECT player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id FROM player
+SELECT player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id, exp FROM player
 WHERE username = ?
 LIMIT 1
 `
@@ -357,6 +360,7 @@ func (q *Queries) GetPlayerByUsername(ctx context.Context, username string) (Pla
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 	)
 	return i, err
 }
@@ -424,8 +428,24 @@ func (q *Queries) GetPlayerCurrency(ctx context.Context, playerID int64) (GetPla
 	return i, err
 }
 
+const getPlayerRank = `-- name: GetPlayerRank :one
+SELECT rank, exp FROM player WHERE player_id = ?
+`
+
+type GetPlayerRankRow struct {
+	Rank int64
+	Exp  int64
+}
+
+func (q *Queries) GetPlayerRank(ctx context.Context, playerID int64) (GetPlayerRankRow, error) {
+	row := q.db.QueryRowContext(ctx, getPlayerRank, playerID)
+	var i GetPlayerRankRow
+	err := row.Scan(&i.Rank, &i.Exp)
+	return i, err
+}
+
 const setPlayerCaddie = `-- name: SetPlayerCaddie :one
-UPDATE player SET caddie_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+UPDATE player SET caddie_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id, exp
 `
 
 type SetPlayerCaddieParams struct {
@@ -467,12 +487,13 @@ func (q *Queries) SetPlayerCaddie(ctx context.Context, arg SetPlayerCaddieParams
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 	)
 	return i, err
 }
 
 const setPlayerCharacter = `-- name: SetPlayerCharacter :one
-UPDATE player SET character_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+UPDATE player SET character_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id, exp
 `
 
 type SetPlayerCharacterParams struct {
@@ -514,12 +535,13 @@ func (q *Queries) SetPlayerCharacter(ctx context.Context, arg SetPlayerCharacter
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 	)
 	return i, err
 }
 
 const setPlayerClubSet = `-- name: SetPlayerClubSet :one
-UPDATE player SET club_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+UPDATE player SET club_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id, exp
 `
 
 type SetPlayerClubSetParams struct {
@@ -561,12 +583,13 @@ func (q *Queries) SetPlayerClubSet(ctx context.Context, arg SetPlayerClubSetPara
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 	)
 	return i, err
 }
 
 const setPlayerComet = `-- name: SetPlayerComet :one
-UPDATE player SET ball_type_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+UPDATE player SET ball_type_id = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id, exp
 `
 
 type SetPlayerCometParams struct {
@@ -608,6 +631,7 @@ func (q *Queries) SetPlayerComet(ctx context.Context, arg SetPlayerCometParams) 
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 	)
 	return i, err
 }
@@ -626,7 +650,7 @@ SET
     slot8_type_id = ?,
     slot9_type_id = ?
 WHERE player_id = ?
-RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id, exp
 `
 
 type SetPlayerConsumablesParams struct {
@@ -689,6 +713,7 @@ func (q *Queries) SetPlayerConsumables(ctx context.Context, arg SetPlayerConsuma
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 	)
 	return i, err
 }
@@ -725,7 +750,7 @@ SET
     cut_in_id = ?,
     title_id = ?
 WHERE player_id = ?
-RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id, exp
 `
 
 type SetPlayerDecorationParams struct {
@@ -780,12 +805,13 @@ func (q *Queries) SetPlayerDecoration(ctx context.Context, arg SetPlayerDecorati
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 	)
 	return i, err
 }
 
 const setPlayerNickname = `-- name: SetPlayerNickname :one
-UPDATE player SET nickname = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id
+UPDATE player SET nickname = ? WHERE player_id = ? RETURNING player_id, username, nickname, password_hash, pang, points, rank, ball_type_id, mascot_type_id, slot0_type_id, slot1_type_id, slot2_type_id, slot3_type_id, slot4_type_id, slot5_type_id, slot6_type_id, slot7_type_id, slot8_type_id, slot9_type_id, caddie_id, club_id, background_id, frame_id, sticker_id, slot_id, cut_in_id, title_id, poster0_id, poster1_id, character_id, exp
 `
 
 type SetPlayerNicknameParams struct {
@@ -827,6 +853,29 @@ func (q *Queries) SetPlayerNickname(ctx context.Context, arg SetPlayerNicknamePa
 		&i.Poster0ID,
 		&i.Poster1ID,
 		&i.CharacterID,
+		&i.Exp,
 	)
+	return i, err
+}
+
+const setPlayerRank = `-- name: SetPlayerRank :one
+UPDATE player SET rank = ?, exp = ? WHERE player_id = ? RETURNING rank, exp
+`
+
+type SetPlayerRankParams struct {
+	Rank     int64
+	Exp      int64
+	PlayerID int64
+}
+
+type SetPlayerRankRow struct {
+	Rank int64
+	Exp  int64
+}
+
+func (q *Queries) SetPlayerRank(ctx context.Context, arg SetPlayerRankParams) (SetPlayerRankRow, error) {
+	row := q.db.QueryRowContext(ctx, setPlayerRank, arg.Rank, arg.Exp, arg.PlayerID)
+	var i SetPlayerRankRow
+	err := row.Scan(&i.Rank, &i.Exp)
 	return i, err
 }

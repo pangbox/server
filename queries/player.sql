@@ -108,3 +108,9 @@ SELECT pang, points FROM player WHERE player_id = ?;
 
 -- name: SetPlayerCurrency :one
 UPDATE player SET pang = ?, points = ? WHERE player_id = ? RETURNING pang, points;
+
+-- name: GetPlayerRank :one
+SELECT rank, exp FROM player WHERE player_id = ?;
+
+-- name: SetPlayerRank :one
+UPDATE player SET rank = ?, exp = ? WHERE player_id = ? RETURNING rank, exp;
