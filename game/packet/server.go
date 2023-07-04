@@ -499,10 +499,10 @@ type Server004E struct {
 }
 
 type HoleInfo struct {
-	HoleID uint32
-	Pin    uint8
-	Course uint8
-	Num    uint8
+	HoleID  uint32
+	Pin     uint8
+	Course  uint8
+	HoleNum uint8
 }
 
 type ServerRoomGameData struct {

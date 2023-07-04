@@ -21,7 +21,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
+	"reflect"
 	"time"
 
 	"github.com/pangbox/server/common"
@@ -44,22 +46,21 @@ type Room struct {
 	accounts *accounts.Service
 }
 
-type PlayerGameState struct {
-	GameReady bool
-	ShotSync  *gamemodel.ShotSyncData
-	TurnEnd   bool
-	HoleEnd   bool
-}
-
 type RoomPlayer struct {
 	Entry      *gamemodel.RoomPlayerEntry
 	Conn       *gamepacket.ServerConn
 	PlayerData pangya.PlayerData
-	GameState  *PlayerGameState
+	GameReady  bool
+	ShotSync   *gamemodel.ShotSyncData
+	TurnEnd    bool
+	HoleEnd    bool
 	Pang       uint64
 	BonusPang  uint64
+	LastTotal  int8
 	Stroke     int8
 	Score      int32
+	TurnOrder  int
+	Distance   float64
 }
 
 func (r *Room) Start(ctx context.Context, state gamemodel.RoomState, lobby *Lobby, accounts *accounts.Service) bool {
@@ -290,7 +291,6 @@ func (r *Room) handlePlayerJoin(ctx context.Context, event RoomPlayerJoin) error
 		Entry:      event.Entry,
 		Conn:       event.Conn,
 		PlayerData: event.PlayerData,
-		GameState:  &PlayerGameState{},
 	})
 	if present {
 		return errors.New("already in room")
@@ -426,9 +426,41 @@ func (r *Room) handleRoomStartGame(ctx context.Context, event RoomStartGame) err
 	r.state.GamePhase = gamemodel.WaitingLoad
 	r.stateUpdated(ctx)
 
+	// Pick hole numbers to play.
+	h := make([]uint8, 18)
+	for i := 0; i < len(h); i++ {
+		h[i] = uint8(i + 1)
+	}
+	switch r.state.HoleProgression {
+	case 0:
+		break
+	case 1:
+		h = h[len(h)-int(r.state.NumHoles):]
+	case 2:
+		h = h[rand.Intn(len(h)-int(r.state.NumHoles)+1):]
+	case 3:
+		rand.Shuffle(len(h), func(i, j int) { h[i], h[j] = h[j], h[i] })
+	}
+	h = h[:r.state.NumHoles]
+
+	// Generate holes in state.
+	r.state.Holes = make([]gamemodel.RoomHole, r.state.NumHoles)
+	for i := 0; i < int(r.state.NumHoles); i++ {
+		r.state.Holes[i] = gamemodel.RoomHole{
+			Course:  r.state.Course,
+			HoleNum: h[i],
+			HoleID:  rand.Uint32(),
+			Pin:     0, // TODO
+		}
+	}
+	r.state.CurrentHole = 1
+
+	// TODO
 	r.broadcast(ctx, &gamepacket.Server0230{})
 	r.broadcast(ctx, &gamepacket.Server0231{})
 	r.broadcast(ctx, &gamepacket.Server0077{Unknown: 0x64})
+
+	// Send game init packet.
 	now := time.Now()
 	gameInit := &gamepacket.ServerGameInit{
 		SubType: gamepacket.GameInitTypeFull,
@@ -437,10 +469,15 @@ func (r *Room) handleRoomStartGame(ctx context.Context, event RoomStartGame) err
 			Players:    make([]gamepacket.GamePlayer, r.players.Len()),
 		},
 	}
-	r.state.CurrentHole = 1
 	for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
 		// Clear ready status.
 		pair.Value.Entry.StatusFlags &^= gamemodel.RoomStateReady
+
+		// Set initial turn order.
+		pair.Value.TurnOrder = i
+		pair.Value.Distance = math.Inf(1)
+		pair.Value.Stroke = 0
+		pair.Value.LastTotal = 0
 
 		player := pair.Value
 		gameInit.Full.Players[i] = gamepacket.GamePlayer{
@@ -449,9 +486,12 @@ func (r *Room) handleRoomStartGame(ctx context.Context, event RoomStartGame) err
 			StartTime:  pangya.NewSystemTime(now),
 			NumCards:   0,
 		}
+
 		i++
 	}
 	r.broadcast(ctx, gameInit)
+
+	// Send room game data packet.
 	gameData := &gamepacket.ServerRoomGameData{
 		Course:          r.state.Course,
 		Unknown:         0x0,
@@ -462,15 +502,19 @@ func (r *Room) handleRoomStartGame(ctx context.Context, event RoomStartGame) err
 		GameTimerMS:     r.state.GameTimerMS,
 		RandomSeed:      rand.Uint32(),
 	}
-	for i := byte(0); i < 18; i++ {
+	// Copy hole data from state.
+	for i := uint8(0); i < r.state.NumHoles; i++ {
+		stateHole := r.state.Holes[i]
 		gameData.Holes[i] = gamepacket.HoleInfo{
-			HoleID: rand.Uint32(),
-			Pin:    0x0,
-			Course: r.state.Course,
-			Num:    i + 1,
+			HoleID:  stateHole.HoleID,
+			HoleNum: stateHole.HoleNum,
+			Pin:     stateHole.Pin,
+			Course:  stateHole.Course,
 		}
 	}
 	r.broadcast(ctx, gameData)
+
+	// TODO
 	r.broadcast(ctx, &gamepacket.Server016A{Unknown: 1, Unknown2: 0x24bd})
 
 	return nil
@@ -485,7 +529,7 @@ func (r *Room) handleRoomLoadingProgress(ctx context.Context, event RoomLoadingP
 
 func (r *Room) handleRoomGameReady(ctx context.Context, event RoomGameReady) error {
 	if pair := r.players.GetPair(event.ConnID); pair != nil {
-		pair.Value.GameState.GameReady = true
+		pair.Value.GameReady = true
 	}
 	if r.checkGameReady() {
 		r.startHole(ctx)
@@ -555,103 +599,19 @@ func (r *Room) handleRoomGameTurn(ctx context.Context, event RoomGameTurn) error
 
 func (r *Room) handleRoomGameTurnEnd(ctx context.Context, event RoomGameTurnEnd) error {
 	if pair := r.players.GetPair(event.ConnID); pair != nil {
-		pair.Value.GameState.TurnEnd = true
+		pair.Value.TurnEnd = true
 	}
-	if r.checkTurnEnd() {
-		r.broadcast(ctx, &gamepacket.ServerRoomShotEnd{
-			ConnID: r.state.ActiveConnID,
-		})
-		for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
-			pair.Value.GameState.TurnEnd = false
-		}
-
-		// TODO: need to find furthest from pin/etc.
-
-		nextPlayer := r.players.GetPair(r.state.ActiveConnID)
-		if nextPlayer != nil {
-			nextPlayer = nextPlayer.Next()
-		}
-		if nextPlayer == nil {
-			nextPlayer = r.players.Oldest()
-		}
-		for ; nextPlayer != nil; nextPlayer = nextPlayer.Next() {
-			if !nextPlayer.Value.GameState.HoleEnd {
-				break
-			}
-		}
-		if nextPlayer == nil {
-			r.state.CurrentHole++
-			if r.state.CurrentHole > r.state.NumHoles {
-				results := &gamepacket.ServerRoomFinishGame{
-					NumPlayers: uint8(r.players.Len()),
-					Standings:  make([]gamepacket.PlayerGameResult, r.players.Len()),
-				}
-				for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
-					bonusPang := pair.Value.BonusPang
-					bonusPang += r.lobby.configProvider.GetCourseBonus(r.state.Course, r.players.Len(), int(r.state.NumHoles))
-					results.Standings[i].ConnID = pair.Value.Entry.ConnID
-					results.Standings[i].Pang = pair.Value.Pang
-					results.Standings[i].Score = int8(pair.Value.Score)
-					results.Standings[i].BonusPang = bonusPang
-
-					totalPang := bonusPang + pair.Value.Pang
-
-					newPang, err := r.accounts.AddPang(ctx, int64(pair.Value.Entry.PlayerID), int64(totalPang))
-					if err != nil {
-						log.WithError(err).Error("failed giving game-ending pang")
-					}
-
-					if err := pair.Value.Conn.SendMessage(ctx, &gamepacket.ServerPangBalanceData{PangsRemaining: uint64(newPang)}); err != nil {
-						log.WithError(err).Error("failed informing player of game-ending pang")
-					}
-
-					// reset game state now
-					pair.Value.Score = 0
-					pair.Value.Pang = 0
-					pair.Value.BonusPang = 0
-					pair.Value.GameState.HoleEnd = false
-					pair.Value.GameState.ShotSync = nil
-
-					i++
-				}
-				slices.SortFunc(results.Standings, func(a, b gamepacket.PlayerGameResult) bool {
-					return a.Score < b.Score
-				})
-				results.Standings[0].Place = 1
-				for i := 1; i < len(results.Standings); i++ {
-					if results.Standings[i-1].Score == results.Standings[i].Score {
-						// If tie: use placement of tied player(s)
-						results.Standings[i].Place = results.Standings[i-1].Place
-					} else {
-						// If not tie: use position in standing as placement
-						results.Standings[i].Place = uint8(i + 1)
-					}
-				}
-				r.broadcast(ctx, results)
-				r.state.Open = true
-				r.state.CurrentHole = 0
-				r.state.GamePhase = gamemodel.LobbyPhase
-			} else {
-				r.broadcast(ctx, &gamepacket.ServerRoomFinishHole{})
-				for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
-					pair.Value.GameState.HoleEnd = false
-				}
-			}
-			r.stateUpdated(ctx)
-			return nil
-		}
-		r.state.ActiveConnID = nextPlayer.Key
-		r.broadcast(ctx, &gamepacket.ServerRoomActiveUserAnnounce{
-			ConnID: r.state.ActiveConnID,
-		})
+	if r.checkShouldEndTurn() {
+		return r.endTurn(ctx)
 	}
 	return nil
 }
 
 func (r *Room) handleRoomGameHoleEnd(ctx context.Context, event RoomGameHoleEnd) error {
 	if pair := r.players.GetPair(event.ConnID); pair != nil {
-		pair.Value.GameState.HoleEnd = true
-		pair.Value.Score += int32(pair.Value.Stroke) - int32(r.state.HoleInfo.Par)
+		pair.Value.HoleEnd = true
+		pair.Value.Score += int32(pair.Value.Stroke) - int32(r.currentHole().Par)
+		pair.Value.LastTotal = pair.Value.Stroke
 		pair.Value.Stroke = 0
 	}
 	return nil
@@ -662,12 +622,13 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 	if r.state.ShotSync == nil {
 		r.state.ShotSync = &syncData
 	} else {
-		if *r.state.ShotSync != syncData {
+		// TODO: this is inefficient, also does nothing terribly useful.
+		if !reflect.DeepEqual(*r.state.ShotSync, syncData) {
 			log.Warningf("Shot sync mismatch: %#v vs %#v", r.state.ShotSync, syncData)
 		}
 	}
 	if pair := r.players.GetPair(event.ConnID); pair != nil {
-		pair.Value.GameState.ShotSync = r.state.ShotSync
+		pair.Value.ShotSync = r.state.ShotSync
 	}
 	if r.checkShotSync() {
 		r.broadcast(ctx, &gamepacket.ServerRoomShotSync{
@@ -676,12 +637,18 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 		if pair := r.players.GetPair(r.state.ShotSync.ActiveConnID); pair != nil {
 			pair.Value.Pang = uint64(r.state.ShotSync.Pang)
 			pair.Value.BonusPang = uint64(r.state.ShotSync.BonusPang)
+
+			// TODO: Sometimes we need to increment twice, need to compare packets
 			pair.Value.Stroke++
+
+			dx := float64(r.currentHole().PinX) - float64(r.state.ShotSync.X)
+			dy := float64(r.currentHole().PinZ) - float64(r.state.ShotSync.Z)
+			pair.Value.Distance = math.Sqrt(dx*dx + dy*dy)
 		} else {
 			log.WithField("ConnID", r.state.ShotSync.ActiveConnID).Warn("couldn't find conn")
 		}
 		for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
-			pair.Value.GameState.ShotSync = nil
+			pair.Value.ShotSync = nil
 		}
 		r.state.ShotSync = nil
 	}
@@ -689,13 +656,15 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 }
 
 func (r *Room) handleRoomGameHoleInfo(ctx context.Context, event RoomGameHoleInfo) error {
-	r.state.HoleInfo = &gamemodel.HoleInfo{
-		Par:  event.Par,
-		TeeX: event.TeeX,
-		TeeZ: event.TeeZ,
-		PinX: event.PinX,
-		PinZ: event.PinZ,
-	}
+	hole := r.currentHole()
+
+	// TODO: It'd probably be better to not rely on the client for this if possible.
+	hole.Par = event.Par
+	hole.TeeX = event.TeeX
+	hole.TeeZ = event.TeeZ
+	hole.PinX = event.PinX
+	hole.PinZ = event.PinZ
+
 	return nil
 }
 
@@ -706,9 +675,145 @@ func (r *Room) handleChatMessage(ctx context.Context, event ChatMessage) error {
 	return r.broadcast(ctx, msg)
 }
 
+func (r *Room) endTurn(ctx context.Context) error {
+	r.broadcast(ctx, &gamepacket.ServerRoomShotEnd{
+		ConnID: r.state.ActiveConnID,
+	})
+	for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
+		pair.Value.TurnEnd = false
+	}
+	nextPlayer := r.getNextPlayer()
+	if nextPlayer == nil {
+		return r.endHole(ctx)
+	}
+	r.state.ActiveConnID = nextPlayer.Entry.ConnID
+	r.broadcast(ctx, &gamepacket.ServerRoomActiveUserAnnounce{
+		ConnID: r.state.ActiveConnID,
+	})
+	return nil
+}
+
+func (r *Room) getNextPlayer() *RoomPlayer {
+	var nextPlayer *RoomPlayer
+	for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
+		// Don't consider players who are finished with this hole.
+		if pair.Value.HoleEnd {
+			continue
+		}
+		// If we don't have a candidate yet, then use the first player we see.
+		if nextPlayer == nil {
+			nextPlayer = &pair.Value
+			continue
+		}
+		// Prefer players further away.
+		if pair.Value.Distance > nextPlayer.Distance {
+			nextPlayer = &pair.Value
+			continue
+		}
+		// Finally, prefer players with a lower turn order.
+		if pair.Value.Distance == nextPlayer.Distance && pair.Value.TurnOrder < nextPlayer.TurnOrder {
+			nextPlayer = &pair.Value
+			continue
+		}
+	}
+	if nextPlayer != nil {
+		log.Printf("next player: %s, with distance: %f", nextPlayer.Entry.Nickname, nextPlayer.Distance)
+	}
+	// Note: can return nil if everyone has holed out.
+	return nextPlayer
+}
+
+func (r *Room) endHole(ctx context.Context) error {
+	r.state.CurrentHole++
+	if r.state.CurrentHole > r.state.NumHoles {
+		return r.endGame(ctx)
+	} else {
+		r.broadcast(ctx, &gamepacket.ServerRoomFinishHole{})
+		for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
+			pair.Value.HoleEnd = false
+		}
+		r.setupNextTurnOrder()
+	}
+	r.stateUpdated(ctx)
+	return nil
+}
+
+func (r *Room) setupNextTurnOrder() {
+	players := []*RoomPlayer{}
+	for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
+		players = append(players, &pair.Value)
+		log.Printf("before: %s: last=%d, order=%d", pair.Value.Entry.Nickname, pair.Value.LastTotal, pair.Value.TurnOrder)
+	}
+	slices.SortFunc(players, func(a, b *RoomPlayer) bool {
+		// If two players tied on last hole, they should maintain their previous
+		// turn order; so fall back to sorting by current turn order.
+		if a.LastTotal == b.LastTotal {
+			return a.TurnOrder < b.TurnOrder
+		}
+		return a.LastTotal < b.LastTotal
+	})
+	for i, player := range players {
+		player.TurnOrder = i
+		player.Distance = math.Inf(1)
+		log.Printf("after: %s: last=%d, order=%d", player.Entry.Nickname, player.LastTotal, player.TurnOrder)
+	}
+}
+
+func (r *Room) endGame(ctx context.Context) error {
+	results := &gamepacket.ServerRoomFinishGame{
+		NumPlayers: uint8(r.players.Len()),
+		Standings:  make([]gamepacket.PlayerGameResult, r.players.Len()),
+	}
+	for i, pair := 0, r.players.Oldest(); pair != nil; pair = pair.Next() {
+		bonusPang := pair.Value.BonusPang
+		bonusPang += r.lobby.configProvider.GetCourseBonus(r.state.Course, r.players.Len(), int(r.state.NumHoles))
+		results.Standings[i].ConnID = pair.Value.Entry.ConnID
+		results.Standings[i].Pang = pair.Value.Pang
+		results.Standings[i].Score = int8(pair.Value.Score)
+		results.Standings[i].BonusPang = bonusPang
+
+		totalPang := bonusPang + pair.Value.Pang
+
+		newPang, err := r.accounts.AddPang(ctx, int64(pair.Value.Entry.PlayerID), int64(totalPang))
+		if err != nil {
+			log.WithError(err).Error("failed giving game-ending pang")
+		}
+
+		if err := pair.Value.Conn.SendMessage(ctx, &gamepacket.ServerPangBalanceData{PangsRemaining: uint64(newPang)}); err != nil {
+			log.WithError(err).Error("failed informing player of game-ending pang")
+		}
+
+		pair.Value.Score = 0
+		pair.Value.Pang = 0
+		pair.Value.BonusPang = 0
+		pair.Value.HoleEnd = false
+		pair.Value.ShotSync = nil
+
+		i++
+	}
+	slices.SortFunc(results.Standings, func(a, b gamepacket.PlayerGameResult) bool {
+		return a.Score < b.Score
+	})
+	results.Standings[0].Place = 1
+	for i := 1; i < len(results.Standings); i++ {
+		if results.Standings[i-1].Score == results.Standings[i].Score {
+			// If tie: use placement of tied player(s)
+			results.Standings[i].Place = results.Standings[i-1].Place
+		} else {
+			// If not tie: use position in standing as placement
+			results.Standings[i].Place = uint8(i + 1)
+		}
+	}
+	r.broadcast(ctx, results)
+	r.state.Open = true
+	r.state.CurrentHole = 0
+	r.state.GamePhase = gamemodel.LobbyPhase
+	return nil
+}
+
 func (r *Room) checkGameReady() bool {
 	for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
-		if !pair.Value.GameState.GameReady {
+		if !pair.Value.GameReady {
 			return false
 		}
 	}
@@ -717,16 +822,16 @@ func (r *Room) checkGameReady() bool {
 
 func (r *Room) checkShotSync() bool {
 	for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
-		if pair.Value.GameState.ShotSync == nil {
+		if pair.Value.ShotSync == nil {
 			return false
 		}
 	}
 	return true
 }
 
-func (r *Room) checkTurnEnd() bool {
+func (r *Room) checkShouldEndTurn() bool {
 	for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
-		if !pair.Value.GameState.TurnEnd {
+		if !pair.Value.TurnEnd {
 			return false
 		}
 	}
@@ -735,26 +840,22 @@ func (r *Room) checkTurnEnd() bool {
 
 func (r *Room) startHole(ctx context.Context) error {
 	r.state.GamePhase = gamemodel.InGame
-	// TODO: calculate wind/weather.
 	r.broadcast(ctx, &gamepacket.ServerRoomSetWeather{
 		Weather: 0,
 	})
-	// Allow wind up to 12m, but make it increasingly unlikely.
-	wind := rand.Intn(12)
-	if wind >= 11 {
-		wind = rand.Intn(12)
-	}
-	if wind >= 10 {
-		wind = rand.Intn(12)
-	}
+	wind := rand.Intn(8) + 1
 	r.broadcast(ctx, &gamepacket.ServerRoomSetWind{
 		Wind:    uint8(wind),
 		Unknown: 0,
 		Heading: uint16(rand.Intn(256)),
 		Reset:   true,
 	})
-	// TODO: select player based on proper order
-	r.state.ActiveConnID = r.players.Oldest().Key
+	nextPlayer := r.getNextPlayer()
+	if nextPlayer == nil {
+		log.Error("nextPlayer == nil in startHole?")
+		return nil
+	}
+	r.state.ActiveConnID = nextPlayer.Entry.ConnID
 	r.broadcast(ctx, &gamepacket.ServerRoomStartHole{
 		ConnID: r.state.ActiveConnID,
 	})
@@ -851,4 +952,8 @@ func (r *Room) roomStatus() *gamepacket.ServerRoomStatus {
 		Owner:           true,
 		RoomName:        common.ToPString(r.state.RoomName),
 	}
+}
+
+func (r *Room) currentHole() *gamemodel.RoomHole {
+	return &r.state.Holes[r.state.CurrentHole-1]
 }
