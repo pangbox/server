@@ -121,7 +121,7 @@ type RoomState struct {
 
 	GamePhase    GamePhase
 	ShotSync     *ShotSyncData
-	HoleInfo     *HoleInfo
+	Holes        []RoomHole
 	ActiveConnID uint32
 }
 
@@ -170,10 +170,14 @@ type ShotSyncData struct {
 	Unknown2     [11]byte
 }
 
-type HoleInfo struct {
-	Par  uint8
-	TeeX float32
-	TeeZ float32
-	PinX float32
-	PinZ float32
+type RoomHole struct {
+	Course  byte
+	HoleNum uint8
+	HoleID  uint32
+	Pin     uint8
+	Par     uint8
+	TeeX    float32
+	TeeZ    float32
+	PinX    float32
+	PinZ    float32
 }

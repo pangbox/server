@@ -85,6 +85,7 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x016A: &Server016A{},
 	0x016C: &ServerLockerCombinationResponse{},
 	0x0170: &ServerLockerInventoryResponse{},
+	0x0199: &ServerRoomPlayerFinished{},
 	0x01F6: &Server01F6{},
 	0x020E: &Server020E{},
 	0x0210: &ServerInboxNotify{},
@@ -498,10 +499,10 @@ type Server004E struct {
 }
 
 type HoleInfo struct {
-	HoleID uint32
-	Pin    uint8
-	Course uint8
-	Num    uint8
+	HoleID  uint32
+	Pin     uint8
+	Course  uint8
+	HoleNum uint8
 }
 
 type ServerRoomGameData struct {
@@ -632,6 +633,10 @@ type ServerLockerInventoryResponse struct {
 	ServerMessage_
 	Unknown uint32
 	Status  uint32
+}
+
+type ServerRoomPlayerFinished struct {
+	ServerMessage_
 }
 
 // ServerRoomJoin is sent when a room is joined.
