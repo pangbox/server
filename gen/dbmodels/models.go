@@ -109,6 +109,7 @@ type Player struct {
 	Poster0ID    sql.NullInt64
 	Poster1ID    sql.NullInt64
 	CharacterID  sql.NullInt64
+	Exp          int64
 }
 
 type Session struct {
