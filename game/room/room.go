@@ -778,6 +778,9 @@ func (r *Room) setupNextTurnOrder() {
 }
 
 func (r *Room) endGame(ctx context.Context) error {
+	if r.players.Len() == 0 {
+		return nil
+	}
 	results := &gamepacket.ServerRoomFinishGame{
 		NumPlayers: uint8(r.players.Len()),
 		Standings:  make([]gamepacket.PlayerGameResult, r.players.Len()),
