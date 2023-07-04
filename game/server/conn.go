@@ -172,15 +172,16 @@ func (c *Conn) Handle(ctx context.Context) error {
 				break
 			}
 			newRoom, err := c.currentLobby.NewRoom(context.Background(), gamemodel.RoomState{
-				ShotTimerMS: t.ShotTimerMS,
-				GameTimerMS: t.GameTimerMS,
-				MaxUsers:    t.MaxUsers,
-				RoomType:    t.RoomType,
-				NumHoles:    t.NumHoles,
-				Course:      t.Course,
-				RoomName:    t.RoomName.Value,
-				Password:    t.Password.Value,
-				// TODO: natural wind, hole progression, more?
+				ShotTimerMS:     t.ShotTimerMS,
+				GameTimerMS:     t.GameTimerMS,
+				MaxUsers:        t.MaxUsers,
+				RoomType:        t.RoomType,
+				NumHoles:        t.NumHoles,
+				Course:          t.Course,
+				RoomName:        t.RoomName.Value,
+				Password:        t.Password.Value,
+				HoleProgression: t.HoleProgression,
+				// TODO: natural wind, more?
 			})
 			if err != nil {
 				// TODO: handle error

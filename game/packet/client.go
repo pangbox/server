@@ -132,17 +132,18 @@ type ClientRoomEdit struct {
 // ClientRoomCreate is sent by the client when creating a room.
 type ClientRoomCreate struct {
 	ClientMessage_
-	Unknown     byte
-	ShotTimerMS uint32
-	GameTimerMS uint32
-	MaxUsers    uint8
-	RoomType    byte
-	NumHoles    byte
-	Course      byte
-	Unknown2    [5]byte
-	RoomName    common.PString
-	Password    common.PString
-	Unknown3    [4]byte
+	Unknown         byte
+	ShotTimerMS     uint32
+	GameTimerMS     uint32
+	MaxUsers        uint8
+	RoomType        byte
+	NumHoles        byte
+	Course          byte
+	HoleProgression byte
+	Unknown2        [4]byte
+	RoomName        common.PString
+	Password        common.PString
+	Unknown3        [4]byte
 }
 
 // ClientRoomJoin is sent by the client when joining a room.
