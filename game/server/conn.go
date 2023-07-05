@@ -50,6 +50,13 @@ type Conn struct {
 	currentRoom  *room.Room
 }
 
+func (c *Conn) triggerUpdate() {
+	select {
+	case c.updatePlayer <- struct{}{}:
+	default:
+	}
+}
+
 func (c *Conn) getLobbyPlayer() gamemodel.LobbyPlayer {
 	return gamemodel.LobbyPlayer{
 		PlayerID:         uint32(c.player.PlayerID),
@@ -214,12 +221,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 				Entry:      c.getRoomPlayer(),
 				Conn:       c.ServerConn,
 				PlayerData: c.getPlayerData(),
-				UpdateFunc: func() {
-					select {
-					case c.updatePlayer <- struct{}{}:
-					default:
-					}
-				},
+				UpdateFunc: c.triggerUpdate,
 			})
 		case *gamepacket.ClientAssistModeToggle:
 			c.SendMessage(ctx, &gamepacket.ServerAssistModeToggled{})
@@ -410,6 +412,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 					Entry:      c.getRoomPlayer(),
 					Conn:       c.ServerConn,
 					PlayerData: c.getPlayerData(),
+					UpdateFunc: c.triggerUpdate,
 				})
 				c.currentRoom = joinRoom
 			}
