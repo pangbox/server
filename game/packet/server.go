@@ -809,6 +809,7 @@ type ServerPlayerInfoResponse struct {
 	ServerMessage_
 	Request uint8
 	UserID  uint32
+	RoomID  uint16
 	Info    pangya.PlayerInfo
 	Unknown uint32
 }

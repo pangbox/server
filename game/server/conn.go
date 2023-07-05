@@ -197,6 +197,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 				c.SendMessage(ctx, &gamepacket.ServerPlayerInfoResponse{
 					Request: t.Request,
 					UserID:  t.UserID,
+					RoomID:  0xFFFF,
 					Info:    playerInfoFromDB(&player, 0), // TODO: set conn id somehow
 				})
 				c.SendMessage(ctx, &gamepacket.ServerPlayerCharacterResponse{
