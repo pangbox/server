@@ -69,6 +69,10 @@ func (c *Conn) handleAuth(ctx context.Context) error {
 		return fmt.Errorf("sending server list: %w", err)
 	}
 
+	if err := c.sendPlayerStatistics(ctx); err != nil {
+		return fmt.Errorf("sending player statistics to client: %w", err)
+	}
+
 	return nil
 }
 
@@ -238,4 +242,12 @@ func (c *Conn) sendServerList(ctx context.Context) error {
 	}
 	message.Count = uint8(len(response.Msg.Server))
 	return c.SendMessage(ctx, message)
+}
+
+func (c *Conn) sendPlayerStatistics(ctx context.Context) error {
+	return c.SendMessage(ctx, &gamepacket.ServerPlayerStatisticsResponse{
+		Request: 0,
+		UserID:  uint32(c.player.PlayerID),
+		Stats:   c.getPlayerStats(),
+	})
 }

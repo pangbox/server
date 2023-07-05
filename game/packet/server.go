@@ -60,6 +60,7 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x0077: &Server0077{},
 	0x0078: &ServerPlayerReady{},
 	0x0086: &ServerRoomInfoResponse{},
+	0x0089: &ServerPlayerDataResponse{},
 	0x0090: &ServerPlayerFirstShotReady{},
 	0x0092: &ServerOpponentQuit{},
 	0x0095: &ServerMoneyUpdate{},
@@ -81,12 +82,17 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x012B: &ServerMyRoomEntered{},
 	0x012D: &ServerMyRoomLayout{},
 	0x0151: &Server0151{},
-	0x0158: &ServerPlayerStats{},
+	0x0156: &ServerPlayerEquipmentResponse{},
+	0x0157: &ServerPlayerInfoResponse{},
+	0x0158: &ServerPlayerStatisticsResponse{},
+	0x015E: &ServerPlayerCharacterResponse{},
 	0x0168: &ServerPlayerInfo{},
 	0x016A: &Server016A{},
 	0x016C: &ServerLockerCombinationResponse{},
 	0x0170: &ServerLockerInventoryResponse{},
 	0x0199: &ServerRoomPlayerFinished{},
+	0x01BC: &ServerGuildListPage{},
+	0x01EB: &ServerScratchyMenuResponse{},
 	0x01F6: &Server01F6{},
 	0x020E: &Server020E{},
 	0x0210: &ServerInboxNotify{},
@@ -95,6 +101,7 @@ var ServerMessageTable = common.NewMessageTable(map[uint16]ServerMessage{
 	0x0216: &ServerUserStatusUpdate{},
 	0x021B: &ServerBlackPapelWinnings{},
 	0x021D: &ServerAchievementProgress{},
+	0x0225: &ServerQuestStatus{},
 	0x022C: &ServerAchievementUnknownResponse{},
 	0x022D: &ServerAchievementStatusResponse{},
 	0x0230: &Server0230{},
@@ -645,6 +652,21 @@ type ServerRoomPlayerFinished struct {
 	ServerMessage_
 }
 
+type ServerGuildListPage struct {
+	ServerMessage_
+	Status     uint32
+	Page       uint32
+	NumPages   uint32
+	GuildCount uint16
+	Guilds     []pangya.GuildData
+}
+
+type ServerScratchyMenuResponse struct {
+	ServerMessage_
+	Status  uint32
+	Unknown uint8
+}
+
 // ServerRoomJoin is sent when a room is joined.
 type ServerRoomJoin struct {
 	ServerMessage_
@@ -666,6 +688,13 @@ type ServerPlayerReady struct {
 type ServerRoomInfoResponse struct {
 	ServerMessage_
 	RoomInfo gamemodel.RoomInfo
+}
+
+type ServerPlayerDataResponse struct {
+	ServerMessage_
+	Status  uint32
+	Request uint8
+	UserID  uint32
 }
 
 type ServerPlayerFirstShotReady struct {
@@ -769,12 +798,32 @@ type Server0151 struct {
 	Unknown []byte
 }
 
-type ServerPlayerStats struct {
+type ServerPlayerEquipmentResponse struct {
 	ServerMessage_
+	Request   uint8
+	UserID    uint32
+	Equipment pangya.PlayerEquipment
+}
 
-	SessionID uint32
-	Unknown   byte
-	Stats     pangya.PlayerStats
+type ServerPlayerInfoResponse struct {
+	ServerMessage_
+	Request uint8
+	UserID  uint32
+	Info    pangya.PlayerInfo
+	Unknown uint32
+}
+
+type ServerPlayerStatisticsResponse struct {
+	ServerMessage_
+	Request uint8
+	UserID  uint32
+	Stats   pangya.PlayerStats
+}
+
+type ServerPlayerCharacterResponse struct {
+	ServerMessage_
+	UserID    uint32
+	Character pangya.PlayerCharacterData
 }
 
 type ServerPlayerInfo struct {
@@ -901,6 +950,17 @@ type ServerAchievementProgress struct {
 	Remaining    uint32
 	Count        uint32 `struct:"sizeof=Achievements"`
 	Achievements []AchievementProgress
+}
+
+type ServerQuestStatus struct {
+	ServerMessage_
+	Status               uint32
+	QuestExpiryUnixTime  uint32
+	QuestStartedUnixTime uint32
+	QuestCount           uint32 `struct:"sizeof=QuestTypeID"`
+	QuestTypeID          []uint32
+	QuestSlotCount       uint32 `struct:"sizeof=QuestStatusSlot"`
+	QuestStatusSlot      []uint32
 }
 
 type Server0230 struct {

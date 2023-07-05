@@ -141,9 +141,7 @@ func (s *Service) GetCharacters(ctx context.Context, playerID int64) ([]pangya.P
 				uint32(character.AuxPart4ID.Int64),
 			},
 			CutInID: uint32(character.CutInID.Int64),
-			//Mastery: uint32(character.Mastery),
 		}
-		result[i].ID = uint32(character.CharacterID)
 	}
 	return result, nil
 }

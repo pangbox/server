@@ -183,9 +183,43 @@ func (c *Conn) Handle(ctx context.Context) error {
 		case *gamepacket.ClientGetUserOnlineStatus:
 			// TODO
 			log.Debug("TODO: online status")
-		case *gamepacket.ClientGetUserData:
-			// TODO
-			log.Debug("TODO: user data")
+		case *gamepacket.ClientGetPlayerData:
+			player, err := c.s.accountsService.GetPlayer(ctx, int64(t.UserID))
+			if err != nil {
+				c.SendMessage(ctx, &gamepacket.ServerPlayerDataResponse{
+					Status:  2,
+					Request: t.Request,
+					UserID:  t.UserID,
+				})
+				break
+			}
+			if t.Request == 5 {
+				c.SendMessage(ctx, &gamepacket.ServerPlayerInfoResponse{
+					Request: t.Request,
+					UserID:  t.UserID,
+					Info:    playerInfoFromDB(&player, 0), // TODO: set conn id somehow
+				})
+				c.SendMessage(ctx, &gamepacket.ServerPlayerCharacterResponse{
+					UserID:    t.UserID,
+					Character: playerEquippedCharacterFromDB(&player),
+				})
+				c.SendMessage(ctx, &gamepacket.ServerPlayerEquipmentResponse{
+					Request:   t.Request,
+					UserID:    t.UserID,
+					Equipment: playerEquippedItemsFromDB(&player),
+				})
+			}
+			c.SendMessage(ctx, &gamepacket.ServerPlayerStatisticsResponse{
+				Request: t.Request,
+				UserID:  t.UserID,
+				Stats:   playerStatsFromDB(&player),
+			})
+			// TODO: Missing a lot of responses.
+			c.SendMessage(ctx, &gamepacket.ServerPlayerDataResponse{
+				Status:  1,
+				Request: t.Request,
+				UserID:  t.UserID,
+			})
 		case *gamepacket.ClientRoomLoungeAction:
 			if c.currentRoom == nil {
 				break
@@ -826,6 +860,21 @@ func (c *Conn) Handle(ctx context.Context) error {
 			c.sendCharacterData(ctx)
 		case *gamepacket.Client004F:
 			// ignore
+		case *gamepacket.ClientQuestStatusRequest:
+			// TODO
+			c.SendMessage(ctx, &gamepacket.ServerQuestStatus{
+				Status: 1,
+			})
+		case *gamepacket.ClientGuildListRequest:
+			// TODO
+			c.SendMessage(ctx, &gamepacket.ServerGuildListPage{
+				Status: 1,
+			})
+		case *gamepacket.ClientScratchyMenuOpen:
+			// TODO
+			c.SendMessage(ctx, &gamepacket.ServerScratchyMenuResponse{
+				Status: 1,
+			})
 		default:
 			return fmt.Errorf("unexpected message: %T", t)
 		}

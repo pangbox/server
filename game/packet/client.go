@@ -54,7 +54,7 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x0022: &ClientShotActiveUserAcknowledge{},
 	0x0026: &ClientRoomKick{},
 	0x002D: &ClientRoomInfo{},
-	0x002F: &ClientGetUserData{},
+	0x002F: &ClientGetPlayerData{},
 	0x0030: &ClientPauseGame{},
 	0x0031: &ClientHoleEnd{},
 	0x0032: &ClientSetIdleStatus{},
@@ -80,10 +80,13 @@ var ClientMessageTable = common.NewMessageTable(map[uint16]ClientMessage{
 	0x00CC: &ClientLockerCombinationAttempt{},
 	0x00D3: &ClientLockerInventoryRequest{},
 	0x00FE: &Client00FE{},
+	0x0108: &ClientGuildListRequest{},
+	0x012A: &ClientScratchyMenuOpen{},
 	0x0140: &ClientShopJoin{},
 	0x0143: &ClientRequestInboxList{},
 	0x0144: &ClientRequestInboxMessage{},
 	0x014B: &ClientBlackPapelPlay{},
+	0x0151: &ClientQuestStatusRequest{},
 	0x0157: &ClientAchievementStatusRequest{},
 	0x016E: &ClientRequestDailyReward{},
 	0x0176: &ClientEventLobbyJoin{},
@@ -400,9 +403,9 @@ type ClientAchievementStatusRequest struct {
 	UserID uint32
 }
 
-// ClientGetUserData is a message sent by the client to request
+// ClientGetPlayerData is a message sent by the client to request
 // the client state.
-type ClientGetUserData struct {
+type ClientGetPlayerData struct {
 	ClientMessage_
 	UserID  uint32
 	Request byte
@@ -543,7 +546,20 @@ type Client00FE struct {
 	ClientMessage_
 }
 
+type ClientGuildListRequest struct {
+	ClientMessage_
+	Page uint32
+}
+
+type ClientScratchyMenuOpen struct {
+	ClientMessage_
+}
+
 type ClientBlackPapelPlay struct {
+	ClientMessage_
+}
+
+type ClientQuestStatusRequest struct {
 	ClientMessage_
 }
 
