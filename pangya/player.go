@@ -150,8 +150,9 @@ type PlayerCharacterData struct {
 	Unknown3    [216]byte
 	AuxParts    [5]uint32
 	CutInID     uint32
-	Unknown4    [16]byte
+	Unknown4    [12]byte
 	Stats       [5]byte
+	Mastery     uint32
 	CardChar    [4]uint32
 	CardCaddie  [4]uint32
 	CardNPC     [4]uint32
