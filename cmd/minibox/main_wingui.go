@@ -38,12 +38,18 @@ import (
 	"github.com/pangbox/server/cmd/minibox/lang/dict"
 	"github.com/pangbox/server/minibox"
 	"github.com/pangbox/server/res"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"github.com/xo/dburl"
 	"golang.org/x/sys/windows"
 )
 
 var logs bytes.Buffer
+var log = zerolog.
+	New(&logs).
+	With().
+	Timestamp().
+	Logger()
+
 var mw *walk.MainWindow
 var ni *walk.NotifyIcon
 var lang *dict.Dict
@@ -587,13 +593,13 @@ func mainForm() walk.Form {
 func fatalError(args ...any) {
 	msg := fmt.Sprint(args...)
 	walk.MsgBox(mainForm(), tr("Fatal Error"), msg, walk.MsgBoxIconError)
-	log.Fatal(msg)
+	log.Fatal().Msg(msg)
 }
 
 func fatalErrorf(msg string, args ...any) {
 	msg = fmt.Sprintf(msg, args...)
 	walk.MsgBox(mainForm(), tr("Fatal Error"), msg, walk.MsgBoxIconError)
-	log.Fatal(msg)
+	log.Fatal().Msg(msg)
 }
 
 func updateLang() {
@@ -620,10 +626,7 @@ func main() {
 		return
 	}
 
-	log.SetOutput(&logs)
-
 	ctx := context.Background()
-	log := log.WithContext(ctx)
 
 	minibox := minibox.NewServer(ctx, log)
 	dummy, err := walk.NewMainWindow()

@@ -25,7 +25,7 @@ import (
 	"github.com/pangbox/server/common/topology"
 	"github.com/pangbox/server/gen/proto/go/topologypb"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -47,18 +47,24 @@ func init() {
 }
 
 func main() {
+	log := zerolog.
+		New(os.Stderr).
+		With().
+		Timestamp().
+		Logger()
+
 	if staticServerList == "" {
-		log.Fatal("Currently, topology server requires a static server list.")
+		log.Fatal().Msg("topology server requires a static server list for now")
 	}
 
 	jsonData, err := os.ReadFile(staticServerList)
 	if err != nil {
-		log.Fatalf("Error reading static server data: %v", err)
+		log.Fatal().Err(err).Msg("error reading static server list")
 	}
 
 	config := &topologypb.Configuration{}
 	if err := protojson.Unmarshal(jsonData, config); err != nil {
-		log.Fatalf("Error parsing static server data: %v", err)
+		log.Fatal().Err(err).Msg("error parsing static server list")
 	}
 
 	serverList := []*topologypb.ServerEntry{}
@@ -77,5 +83,9 @@ func main() {
 	if useH2C {
 		httpserver.Handler = h2c.NewHandler(httpserver.Handler, &http2.Server{})
 	}
-	log.Fatal(httpserver.ListenAndServe())
+
+	log.Info().Str("address", listenAddr).Msg("listening for message service connections")
+	if err := httpserver.ListenAndServe(); err != nil {
+		log.Fatal().Err(err).Msg("error in login server")
+	}
 }

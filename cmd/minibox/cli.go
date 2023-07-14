@@ -19,11 +19,12 @@ package main
 
 import (
 	"context"
+	"os"
 	"runtime"
 
 	_ "github.com/pangbox/server/migrations"
 	"github.com/pangbox/server/minibox"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	_ "modernc.org/sqlite"
 )
 
@@ -31,22 +32,29 @@ import (
 
 func cliMain() {
 	ctx := context.Background()
-	log.SetLevel(log.DebugLevel)
-	log.Println("Welcome to Pangbox. Main thread started.")
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	log := zerolog.
+		New(zerolog.ConsoleWriter{Out: os.Stderr}).
+		With().
+		Timestamp().
+		Logger()
 
-	server := minibox.NewServer(ctx, log.WithContext(ctx))
+	log.Info().Msg("initializing minibox")
+
+	server := minibox.NewServer(ctx, log)
 	if err := server.ConfigureDatabase(dbOpts); err != nil {
-		log.Fatalf("Error setting up database: %v", err)
+		log.Fatal().Err(err).Msg("error setting up database")
 	}
 
 	if err := server.ConfigureServices(opts); err != nil {
-		log.Fatalf("Error setting up services: %v -- try setting -pangya_dir?", err)
+		log.Fatal().Err(err).Msg("error setting up services - try setting -pangya_dir")
 	}
 
-	log.Infof("Web server listening on %s", opts.WebAddr)
-	log.Infof("QA auth server listening on %s", opts.QAAuthAddr)
-	log.Infof("Login server listening on %s", opts.LoginAddr)
-	log.Infof("Game server listening on %s", opts.GameAddr)
-	log.Infof("Message server listening on %s", opts.MessageAddr)
+	log.Info().Str("address", opts.WebAddr).Msg("listening for web server connections")
+	log.Info().Str("address", opts.AdminAddr).Msg("listening for admin web server connections")
+	log.Info().Str("address", opts.QAAuthAddr).Msg("listening for qa auth server connections")
+	log.Info().Str("address", opts.LoginAddr).Msg("listening for login server connections")
+	log.Info().Str("address", opts.GameAddr).Msg("listening for game server connections")
+	log.Info().Str("address", opts.MessageAddr).Msg("listening for message server connections")
 	runtime.Goexit()
 }

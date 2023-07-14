@@ -20,17 +20,17 @@ package minibox
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"github.com/pangbox/pangfiles/crypto/pyxtea"
 	"github.com/pangbox/pangfiles/pak"
 	"github.com/pangbox/server/common/pycrypto"
 	"github.com/pangbox/server/database/accounts"
 	"github.com/pangbox/server/web"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type WebOptions struct {
+	Logger          zerolog.Logger
 	Addr            string
 	PangyaKey       pyxtea.Key
 	PangyaDir       string
@@ -48,8 +48,10 @@ func NewWeb(ctx context.Context) *WebServer {
 }
 
 func (w *WebServer) Configure(opts WebOptions) error {
+	log := opts.Logger
 	spawn := func(ctx context.Context, service *Service) {
 		webServer := http.Server{Addr: opts.Addr, Handler: web.New(web.Options{
+			Logger:          log,
 			ServePangYaData: true,
 			UpdateList: &web.UpdateListOptions{
 				Key: opts.PangyaKey,
@@ -63,13 +65,13 @@ func (w *WebServer) Configure(opts WebOptions) error {
 		})
 
 		if ctx.Err() != nil {
-			log.Errorf("Web server cancelled before server could start: %v", ctx.Err())
+			log.Error().Err(ctx.Err()).Msg("cancelled before web server could start")
 			return
 		}
 
 		err := webServer.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			log.Errorf("Error serving web server: %v", err)
+			log.Error().Err(err).Msg("error serving web server")
 		}
 	}
 
@@ -88,14 +90,14 @@ func (w *WebServer) Stop() error {
 	return w.service.Stop()
 }
 
-func getPakKey(log *log.Entry, region string, patterns []string) (pyxtea.Key, error) {
+func getPakKey(log zerolog.Logger, region string, patterns []string) (pyxtea.Key, error) {
 	if region == "" {
-		log.Println("Auto-detecting pak region (use -region to improve startup delay.)")
+		log.Info().Msg("auto-detecting pak region (use -region to improve startup delay)")
 		key, err := pak.DetectRegion(patterns, pycrypto.Keys)
 		if err != nil {
 			return pyxtea.Key{}, err
 		}
-		log.Printf("Detected pak region as %s.", strings.ToUpper(pycrypto.GetKeyRegion(key)))
+		log.Info().Str("region", pycrypto.GetKeyRegion(key)).Msg("auto-detected pak region")
 		return key, nil
 	}
 	return pycrypto.GetRegionKey(region)

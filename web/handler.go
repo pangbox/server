@@ -24,7 +24,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/pangbox/pangfiles/crypto/pyxtea"
 	"github.com/pangbox/server/database/accounts"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 const maxFormSize = 4096
@@ -35,30 +35,34 @@ type UpdateListOptions struct {
 }
 
 type Options struct {
+	Logger          zerolog.Logger
 	ServePangYaData bool
 	UpdateList      *UpdateListOptions
 	AccountsService *accounts.Service
 }
 
 type Handler struct {
+	log             zerolog.Logger
 	router          httprouter.Router
 	updateHandler   *updateHandler
 	accountsService *accounts.Service
 }
 
-func New(opt Options) *Handler {
+func New(opts Options) *Handler {
+	log := opts.Logger.With().Str("server", "web").Logger()
 	listener := &Handler{
+		log:             log,
 		router:          *httprouter.New(),
-		accountsService: opt.AccountsService,
+		accountsService: opts.AccountsService,
 	}
 
-	if opt.UpdateList != nil {
-		listener.updateHandler = newUpdateListHandler(opt.UpdateList.Key, opt.UpdateList.Dir)
+	if opts.UpdateList != nil {
+		listener.updateHandler = newUpdateListHandler(log, opts.UpdateList.Key, opts.UpdateList.Dir)
 	}
 
 	assets, err := fs.Sub(assetFS, "assets")
 	if err != nil {
-		log.Fatalf("Error getting assets directory: %v", err)
+		log.Fatal().Err(err).Msg("error getting web assets directory")
 	}
 	listener.router.ServeFiles("/static/*filepath", http.FS(assets))
 	listener.router.GET("/register", listener.handleRegisterGet)
@@ -75,7 +79,7 @@ func New(opt Options) *Handler {
 	}
 
 	// PangYa game data
-	if opt.ServePangYaData {
+	if opts.ServePangYaData {
 		listener.router.GET("/Translation/Read.aspx", listener.serveTranslations)
 		listener.router.GET("/new/Service/S4_Patch/extracontents/extracontents.xml", listener.serveExtraContents)
 		listener.router.GET("/pangya/season4/patch/extracontents/extracontents.xml", listener.serveExtraContents)
@@ -86,6 +90,6 @@ func New(opt Options) *Handler {
 }
 
 func (l *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Debugf("WEB: %s %s", r.Method, r.URL.String())
+	l.log.Debug().Str("method", r.Method).Str("url", r.URL.String()).Msg("web http request")
 	l.router.ServeHTTP(w, r)
 }

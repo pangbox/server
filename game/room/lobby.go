@@ -29,14 +29,14 @@ import (
 	gamemodel "github.com/pangbox/server/game/model"
 	gamepacket "github.com/pangbox/server/game/packet"
 	"github.com/pangbox/server/gameconfig"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"golang.org/x/sync/errgroup"
 )
 
 type Lobby struct {
 	actor.Base[LobbyEvent]
-	logger         *log.Entry
+	log            zerolog.Logger
 	storage        *Storage
 	players        *orderedmap.OrderedMap[uint32, *LobbyPlayer]
 	accounts       *accounts.Service
@@ -49,9 +49,9 @@ type LobbyPlayer struct {
 	Joined time.Time
 }
 
-func NewLobby(ctx context.Context, logger *log.Entry, accounts *accounts.Service, configProvider gameconfig.Provider) *Lobby {
+func NewLobby(ctx context.Context, log zerolog.Logger, accounts *accounts.Service, configProvider gameconfig.Provider) *Lobby {
 	lobby := &Lobby{
-		logger:         logger,
+		log:            log,
 		storage:        new(Storage),
 		players:        orderedmap.New[uint32, *LobbyPlayer](),
 		accounts:       accounts,
@@ -155,7 +155,7 @@ func (l *Lobby) handleEvent(ctx context.Context, t *actor.Task[LobbyEvent], msg 
 }
 
 func (l *Lobby) lobbyRoomCreate(ctx context.Context, e *LobbyRoomCreate) (*Room, error) {
-	room := l.storage.NewRoom(ctx)
+	room := l.storage.NewRoom(ctx, l.log)
 	room.Start(ctx, e.Room, l, l.accounts)
 	e.Room.RoomNumber = room.Number()
 	l.broadcast(ctx, &gamepacket.ServerRoomList{
@@ -251,7 +251,7 @@ func (l *Lobby) lobbyPlayerJoin(ctx context.Context, e *LobbyPlayerJoin) error {
 	l.playerSyncLobbyState(ctx, e.Conn)
 
 	if err := e.Conn.SendMessage(ctx, &gamepacket.ServerMultiplayerJoined{}); err != nil {
-		log.WithError(err).Error("error sending multiplayer joined")
+		l.log.Error().Err(err).Msg("error sending multiplayer joined")
 	}
 
 	return nil
@@ -270,7 +270,7 @@ func (l *Lobby) playerSyncLobbyState(ctx context.Context, conn *gamepacket.Serve
 			msg.Count = uint8(len(playerList))
 			msg.PlayerList = playerList
 			if err := conn.SendMessage(ctx, msg); err != nil {
-				log.WithError(err).Error("error sending player list")
+				l.log.Error().Err(err).Msg("error sending player list")
 			}
 			playerList = playerList[0:0]
 			msg.Type = gamepacket.UserListAppend
@@ -280,7 +280,7 @@ func (l *Lobby) playerSyncLobbyState(ctx context.Context, conn *gamepacket.Serve
 		msg.Count = uint8(len(playerList))
 		msg.PlayerList = playerList
 		if err := conn.SendMessage(ctx, msg); err != nil {
-			log.WithError(err).Error("error sending player list")
+			l.log.Error().Err(err).Msg("error sending player list")
 		}
 	}
 
@@ -298,7 +298,7 @@ func (l *Lobby) playerSyncLobbyState(ctx context.Context, conn *gamepacket.Serve
 	}
 
 	if err := conn.SendMessage(ctx, roomListMsg); err != nil {
-		log.WithError(err).Error("error sending room list")
+		l.log.Error().Err(err).Msg("error sending room list")
 	}
 
 	return nil
@@ -325,7 +325,7 @@ func (l *Lobby) lobbyChat(ctx context.Context, e *ChatMessage) error {
 	event.Data.Nickname = common.ToPString(e.Nickname)
 	err := l.broadcast(ctx, event)
 	if err != nil {
-		log.WithError(err).Error("error broadcasting lobby chat message")
+		l.log.Error().Err(err).Msg("error broadcasting lobby chat message")
 	}
 
 	return nil

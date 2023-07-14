@@ -23,12 +23,13 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"os"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/manifoldco/promptui"
 	"github.com/pangbox/pangcrypt"
 	"github.com/pangbox/server/common"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 func readServerPacket(k byte, r io.Reader) ([]byte, error) {
@@ -52,18 +53,18 @@ func readServerPacket(k byte, r io.Reader) ([]byte, error) {
 	return pangcrypt.ServerDecrypt(packet, k)
 }
 
-func sendClientPacket(k byte, w io.Writer, data []byte) {
+func sendClientPacket(log zerolog.Logger, k byte, w io.Writer, data []byte) {
 	salt := rand.Intn(0x100)
 	outpkt, err := pangcrypt.ClientEncrypt(data, k, byte(salt))
 
 	if err != nil {
-		log.Fatal("While encrypting outgoing Login packet:", err)
+		log.Fatal().Err(err).Msg("error encrypting outgoing packet")
 	}
 
 	if n, err := w.Write(outpkt); err != nil {
-		log.Fatal("While sending client packet:", err)
+		log.Fatal().Err(err).Msg("error sending outgoing packet")
 	} else if n < len(outpkt) {
-		log.Fatalf("Short write on out: %d of %d", n, len(outpkt))
+		log.Fatal().Int("written", n).Int("total", len(outpkt)).Msg("short write")
 	}
 }
 
@@ -71,35 +72,41 @@ func main() {
 	loginAddr := flag.String("login_addr", "127.0.0.1:10101", "address of login server")
 	flag.Parse()
 
+	log := zerolog.
+		New(zerolog.ConsoleWriter{Out: os.Stderr}).
+		With().
+		Timestamp().
+		Logger()
+
 	sock, err := net.Dial("tcp", *loginAddr)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("dialing login server")
 	}
 
 	// Read credentials.
 	prompt := promptui.Prompt{Label: "Username"}
 	username, err := prompt.Run()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("prompting for username")
 	}
 	prompt = promptui.Prompt{Label: "Password", Mask: '*'}
 	password, err := prompt.Run()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("prompting for password")
 	}
 
 	// Read hello.
 	hello := [14]byte{}
 	if c, err := sock.Read(hello[:]); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("failed to read hello packet")
 	} else if c < len(hello) {
-		log.Fatal("short read on hello packet")
+		log.Fatal().Int("written", c).Int("total", len(hello)).Msg("short read on hello packet")
 	}
 	key := hello[6]
 
 	log.Printf("Connected to %s with key %d.", sock.RemoteAddr(), key)
 
-	sendClientPacket(key, sock, common.NewPacketBuilder().
+	sendClientPacket(log, key, sock, common.NewPacketBuilder().
 		PutUint16(0x0001).
 		PutPString(username).
 		PutPString(password).
@@ -112,7 +119,7 @@ func main() {
 	for {
 		packet, err := readServerPacket(key, sock)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("reading server packet")
 		}
 		spew.Dump(packet)
 	}

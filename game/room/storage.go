@@ -25,6 +25,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	gamemodel "github.com/pangbox/server/game/model"
+	"github.com/rs/zerolog"
 )
 
 // The primary job of this code is to manage the allocation of rooms in a
@@ -57,13 +58,13 @@ type Storage struct {
 }
 
 // NewRoom returns a new room.
-func (m *Storage) NewRoom(ctx context.Context) *Room {
+func (m *Storage) NewRoom(ctx context.Context, log zerolog.Logger) *Room {
 	if len(m.roomHeap) == 0 {
-		return m.allocRoom(ctx)
+		return m.allocRoom(ctx, log)
 	}
 	lowestRoom := m.roomHeap[0]
 	if lowestRoom.state.Active {
-		return m.allocRoom(ctx)
+		return m.allocRoom(ctx, log)
 	}
 	lowestRoom.state.Active = true
 	heap.Fix(&m.roomHeap, lowestRoom.heapIndex)
@@ -125,7 +126,7 @@ func (m *Storage) GetRoomList() []*Room {
 	return results
 }
 
-func (m *Storage) allocRoom(ctx context.Context) *Room {
+func (m *Storage) allocRoom(ctx context.Context, log zerolog.Logger) *Room {
 	entry := new(RoomEntry)
 
 	m.resizeMu.Lock()
@@ -136,6 +137,7 @@ func (m *Storage) allocRoom(ctx context.Context) *Room {
 	entry.state.RoomNumber = int16(n)
 	entry.state.Active = true
 	entry.room.state.RoomNumber = entry.state.RoomNumber
+	entry.room.log = log.With().Int16("room", entry.state.RoomNumber).Logger()
 	heap.Push(&m.roomHeap, entry)
 	return &entry.room
 }

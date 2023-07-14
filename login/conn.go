@@ -89,7 +89,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 	}
 
 	if err == accounts.ErrUnknownUsername || err == accounts.ErrInvalidPassword {
-		log.Infof("Bad credentials.")
+		log.Info().Msg("bad credentials")
 		c.SendMessage(ctx, &ServerLogin{
 			Status: LoginStatusError,
 			Error: &LoginError{
@@ -118,8 +118,8 @@ func (c *Conn) Handle(ctx context.Context) error {
 
 			switch t := msg.(type) {
 			case *ClientCheckNickname:
-				// TODO
-				log.Infof("TODO: check nickname %s", t.Nickname.Value)
+				// TODO: check nickname for validity/conflict.
+				log.Info().Str("nickname", t.Nickname.Value).Msg("todo: check nickname")
 				c.SendMessage(ctx, &ServerNicknameCheckResponse{
 					Nickname: t.Nickname,
 				})
@@ -127,12 +127,12 @@ func (c *Conn) Handle(ctx context.Context) error {
 				player, err = c.s.accountsService.SetNickname(ctx, player.PlayerID, t.Nickname.Value)
 				if err != nil {
 					// TODO: need to handle error
-					log.Errorf("Database error setting nickname: %v", err)
+					log.Error().Err(err).Msg("database error setting nickname")
 					return nil
 				}
 				break NickSetup
 			default:
-				return fmt.Errorf("expected ClientCheckNickname, ClientSetNickname, got %T", t)
+				return fmt.Errorf("unexpected %T during nickname setup", t)
 			}
 		}
 	}
@@ -151,7 +151,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 
 	haveCharacters, err := c.s.accountsService.HasCharacters(ctx, player.PlayerID)
 	if err != nil {
-		log.Errorf("Database error getting characters: %v", err)
+		log.Error().Err(err).Msg("error fetching characters")
 		return nil
 	}
 
@@ -193,7 +193,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 
 	session, err := c.s.accountsService.AddSession(ctx, player.PlayerID, c.RemoteAddr().String())
 	if err != nil {
-		log.Errorf("Error creating session in DB: %v", err)
+		return fmt.Errorf("error creating session in DB: %v", err)
 	}
 
 	// TODO: make token
@@ -209,21 +209,21 @@ func (c *Conn) Handle(ctx context.Context) error {
 		},
 	})
 
-	log.Info("sending message server list")
+	log.Debug().Msg("sending message server list")
 	messageServers, err := c.GetServerList(ctx, topologypb.Server_TYPE_MESSAGE_SERVER)
 	if err != nil {
 		return fmt.Errorf("listing message servers: %w", err)
 	}
 	c.SendMessage(ctx, &ServerMessageServerList{ServerList: *messageServers})
 
-	log.Info("sending game server list")
+	log.Debug().Msg("sending game server list")
 	gameServers, err := c.GetServerList(ctx, topologypb.Server_TYPE_GAME_SERVER)
 	if err != nil {
 		return fmt.Errorf("listing game servers: %w", err)
 	}
 	c.SendMessage(ctx, &ServerGameServerList{ServerList: *gameServers})
 
-	log.Info("waiting for response.")
+	log.Debug().Msg("waiting for response.")
 	msg, err = c.ReadMessage()
 	if err != nil {
 		return fmt.Errorf("reading next message: %w", err)
@@ -231,7 +231,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 
 	switch t := msg.(type) {
 	case *ClientSelectServer:
-		log.Debugf("Select server: %+v", t)
+		log.Debug().Msgf("select server: %+v", t)
 	default:
 		return fmt.Errorf("expected ClientSelectServer, got %T", t)
 	}

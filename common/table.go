@@ -18,7 +18,7 @@
 package common
 
 import (
-	"log"
+	"fmt"
 	"reflect"
 )
 
@@ -42,7 +42,7 @@ func NewMessageTable[T Message](index map[uint16]T) MessageTable[T] {
 	for id, msg := range index {
 		typ := reflect.TypeOf(msg)
 		if otherId, ok := table.MessageToID[typ]; ok {
-			log.Fatalf("conflict: multiple IDs for message %T: 0x%04x and 0x%04x", msg, id, otherId)
+			panic(fmt.Errorf("conflict: multiple IDs for message %T: 0x%04x and 0x%04x", msg, id, otherId))
 		}
 		table.MessageToID[typ] = id
 	}

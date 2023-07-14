@@ -22,8 +22,8 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"os"
 )
 
@@ -35,7 +35,7 @@ func init() {
 	var err error
 	defaultProvider, err = FromJSONStream(bytes.NewReader(defaultJSON))
 	if err != nil {
-		log.Fatalf("Error loading default gameconfig: %v - please report this.", err)
+		panic(fmt.Errorf("loading default gameconfig: %v - please report this", err))
 	}
 }
 

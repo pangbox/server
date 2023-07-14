@@ -36,14 +36,13 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 
 	"github.com/pangbox/server/cmd/minibox/lang"
+	"github.com/rs/zerolog"
 	"golang.org/x/exp/slices"
 )
 
@@ -53,14 +52,6 @@ var (
 	locales   = flag.String("locales", "", `Comma-separated list of locales, for which to generate or update tr files. e.g.: "de_AT,de_DE,de,es,fr,it".`)
 	defLocale = flag.String("default", "en", "Locale that should be treated as the default locale.")
 )
-
-func logFatal(err error) {
-	log.Fatalf(`An error occurred: %s
-	
-	Stack:
-	%s`,
-		err, debug.Stack())
-}
 
 func sourceKey(source string, context []string) string {
 	if len(context) == 0 {
@@ -100,16 +91,16 @@ func (v visitor) Visit(node ast.Node) (w ast.Visitor) {
 	return v
 }
 
-func (v visitor) scanDir(dirPath string) {
+func (v visitor) scanDir(log zerolog.Logger, dirPath string) {
 	dir, err := os.Open(dirPath)
 	if err != nil {
-		logFatal(err)
+		log.Fatal().Err(err).Str("path", dirPath).Msg("opening directory")
 	}
 	defer dir.Close()
 
 	names, err := dir.Readdirnames(-1)
 	if err != nil {
-		logFatal(err)
+		log.Fatal().Err(err).Msg("reading directory")
 	}
 
 	for _, name := range names {
@@ -117,15 +108,15 @@ func (v visitor) scanDir(dirPath string) {
 
 		fi, err := os.Stat(fullPath)
 		if err != nil {
-			logFatal(err)
+			log.Fatal().Err(err).Str("path", fullPath).Msg("statting path")
 		}
 
 		if fi.IsDir() {
-			v.scanDir(fullPath)
+			v.scanDir(log, fullPath)
 		} else if !fi.IsDir() && strings.HasSuffix(fullPath, ".go") {
 			astFile, err := parser.ParseFile(v.fileSet, fullPath, nil, 0)
 			if err != nil {
-				logFatal(err)
+				log.Fatal().Err(err).Str("path", fullPath).Msg("parsing file")
 			}
 
 			ast.Walk(v, astFile)
@@ -133,7 +124,8 @@ func (v visitor) scanDir(dirPath string) {
 	}
 }
 
-func readTranslation(filePath string) map[string]*lang.Message {
+func readTranslation(log zerolog.Logger, filePath string) map[string]*lang.Message {
+	log = log.With().Str("path", filePath).Logger()
 	sk2m := make(map[string]*lang.Message)
 
 	if fi, _ := os.Stat(filePath); fi == nil {
@@ -142,13 +134,13 @@ func readTranslation(filePath string) map[string]*lang.Message {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		logFatal(err)
+		log.Fatal().Err(err).Msg("opening file")
 	}
 	defer file.Close()
 
 	var trf lang.Translation
 	if err := json.NewDecoder(file).Decode(&trf); err != nil {
-		logFatal(err)
+		log.Fatal().Err(err).Msg("parsing json from file")
 	}
 
 	for _, msg := range trf.Messages {
@@ -158,7 +150,8 @@ func readTranslation(filePath string) map[string]*lang.Message {
 	return sk2m
 }
 
-func writeTranslation(filePath string, trf lang.Translation) {
+func writeTranslation(log zerolog.Logger, filePath string, trf lang.Translation) {
+	log = log.With().Str("path", filePath).Logger()
 	slices.SortFunc(trf.Messages, func(a, b *lang.Message) bool {
 		if a.Source == b.Source {
 			return strings.Join(a.Context, "") < strings.Join(b.Context, "")
@@ -168,18 +161,18 @@ func writeTranslation(filePath string, trf lang.Translation) {
 
 	file, err := os.Create(filePath)
 	if err != nil {
-		logFatal(err)
+		log.Fatal().Err(err).Msg("creating file")
 	}
 	defer file.Close()
 
 	enc := json.NewEncoder(file)
 	enc.SetIndent("", "\t")
 	if err := enc.Encode(trf); err != nil {
-		logFatal(err)
+		log.Fatal().Err(err).Msg("writing json to file")
 	}
 }
 
-func writeUpdatedTranslation(filePath string, sourceKey2Message, oldSourceKey2Message map[string]*lang.Message, loc string) {
+func writeUpdatedTranslation(log zerolog.Logger, filePath string, sourceKey2Message, oldSourceKey2Message map[string]*lang.Message, loc string) {
 	var trf lang.Translation
 	for _, msg := range sourceKey2Message {
 		msgCopy := *msg
@@ -191,10 +184,10 @@ func writeUpdatedTranslation(filePath string, sourceKey2Message, oldSourceKey2Me
 		trf.Messages = append(trf.Messages, &msgCopy)
 	}
 
-	writeTranslation(filePath, trf)
+	writeTranslation(log, filePath, trf)
 }
 
-func writeDefaultTranslation(filePath string, sourceKey2Message map[string]*lang.Message, loc string) {
+func writeDefaultTranslation(log zerolog.Logger, filePath string, sourceKey2Message map[string]*lang.Message, loc string) {
 	var trf lang.Translation
 	for _, msg := range sourceKey2Message {
 		msgCopy := *msg
@@ -202,11 +195,13 @@ func writeDefaultTranslation(filePath string, sourceKey2Message map[string]*lang
 		trf.Messages = append(trf.Messages, &msgCopy)
 	}
 
-	writeTranslation(filePath, trf)
+	writeTranslation(log, filePath, trf)
 }
 
 func main() {
 	flag.Parse()
+
+	log := zerolog.New(os.Stderr)
 
 	if *srcPath == "" || *locales == "" {
 		flag.Usage()
@@ -218,7 +213,7 @@ func main() {
 		sourceKey2Message: make(map[string]*lang.Message),
 	}
 
-	v.scanDir(*srcPath)
+	v.scanDir(log, *srcPath)
 
 	locs := strings.Split(*locales, ",")
 	for _, loc := range locs {
@@ -227,9 +222,9 @@ func main() {
 		filePath := filepath.Join(*outPath, fmt.Sprintf("%s.json", loc))
 
 		if loc == *defLocale {
-			writeDefaultTranslation(filePath, v.sourceKey2Message, loc)
+			writeDefaultTranslation(log, filePath, v.sourceKey2Message, loc)
 		} else {
-			writeUpdatedTranslation(filePath, v.sourceKey2Message, readTranslation(filePath), loc)
+			writeUpdatedTranslation(log, filePath, v.sourceKey2Message, readTranslation(log, filePath), loc)
 		}
 	}
 }

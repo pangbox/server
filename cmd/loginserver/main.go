@@ -20,6 +20,7 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
 
 	"github.com/pangbox/server/common/hash"
 	"github.com/pangbox/server/common/topology"
@@ -27,7 +28,7 @@ import (
 	"github.com/pangbox/server/database/accounts"
 	"github.com/pangbox/server/gameconfig"
 	"github.com/pangbox/server/login"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"github.com/xo/dburl"
 )
 
@@ -48,32 +49,44 @@ func init() {
 
 func main() {
 	ctx := context.Background()
+	log := zerolog.
+		New(os.Stderr).
+		With().
+		Timestamp().
+		Logger()
 
 	url, err := dburl.Parse(databaseURI)
 	if err != nil {
-		log.Fatalf("Error parsing database URL: %v", err)
+		log.Fatal().Err(err).Msg("error parsing database URL")
 	}
+
+	database.SetLogger(log)
 
 	db, err := database.OpenDBWithDriver(url.Driver, url.DSN)
 	if err != nil {
-		log.Fatalf("Failed to open DB: %v\n", err)
+		log.Fatal().Err(err).Msg("error opening database")
 	}
 
 	topologyClient, err := topology.NewClient(topology.ClientOptions{
 		BaseURL: topologyURL,
 	})
 	if err != nil {
-		log.Fatalf("Error creating topology client: %v", err)
+		log.Fatal().Err(err).Msg("error creating topology client")
 	}
 
-	log.Println("Listening for login server on", listenAddr)
+	log.Info().Str("address", listenAddr).Msg("listening for login service connections")
 	loginServer := login.New(login.Options{
+		Logger:         log,
 		TopologyClient: topologyClient,
 		AccountsService: accounts.NewService(accounts.Options{
+			Logger:   log,
 			Database: db,
 			Hasher:   hash.Bcrypt{},
 		}),
 		ConfigProvider: gameconfig.Default(),
 	})
-	log.Fatalln(loginServer.Listen(ctx, listenAddr))
+
+	if err := loginServer.Listen(ctx, listenAddr); err != nil {
+		log.Fatal().Err(err).Msg("error in login server")
+	}
 }

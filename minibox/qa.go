@@ -22,11 +22,12 @@ import (
 	"net/http"
 
 	"github.com/pangbox/server/qa/authserv"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type QAAuthOptions struct {
-	Addr string
+	Logger zerolog.Logger
+	Addr   string
 }
 
 type QAAuthServer struct {
@@ -40,21 +41,24 @@ func NewQAAuth(ctx context.Context) *QAAuthServer {
 }
 
 func (q *QAAuthServer) Configure(opts QAAuthOptions) error {
+	log := opts.Logger
 	spawn := func(ctx context.Context, service *Service) {
-		qaAuthServer := http.Server{Addr: opts.Addr, Handler: authserv.New()}
+		qaAuthServer := http.Server{Addr: opts.Addr, Handler: authserv.New(authserv.Options{
+			Logger: opts.Logger,
+		})}
 
 		service.SetShutdownFunc(func(shutdownCtx context.Context) error {
 			return qaAuthServer.Shutdown(shutdownCtx)
 		})
 
 		if ctx.Err() != nil {
-			log.Errorf("QA Auth service cancelled before server could start: %v", ctx.Err())
+			log.Error().Err(ctx.Err()).Msg("cancelled before qa auth server could start")
 			return
 		}
 
 		err := qaAuthServer.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			log.Errorf("Error serving QA Auth server: %v", err)
+			log.Error().Err(err).Msg("error serving qa auth server")
 		}
 	}
 

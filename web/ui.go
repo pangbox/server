@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
-	log "github.com/sirupsen/logrus"
 )
 
 //go:embed assets/*
@@ -46,7 +45,7 @@ type RegisterPageParams struct {
 
 func (l *Handler) renderRegisterPage(w http.ResponseWriter, params RegisterPageParams) {
 	if err := templates.ExecuteTemplate(w, "register", params); err != nil {
-		log.Errorf("Error executing register template: %v", err)
+		l.log.Error().Err(err).Msg("error executing register template")
 	}
 }
 
@@ -102,6 +101,6 @@ func (l *Handler) handleRegisterPost(w http.ResponseWriter, r *http.Request, _ h
 	}
 
 	if err := templates.ExecuteTemplate(w, "register_complete", nil); err != nil {
-		log.Errorf("Error executing register template: %v", err)
+		l.log.Error().Err(err).Msg("error executing register template")
 	}
 }

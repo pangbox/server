@@ -25,11 +25,12 @@ import (
 	"github.com/pangbox/server/database/accounts"
 	"github.com/pangbox/server/gameconfig"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 // Options specify the options to use to instantiate the login server.
 type Options struct {
+	Logger          zerolog.Logger
 	TopologyClient  topologypbconnect.TopologyServiceClient
 	AccountsService *accounts.Service
 	ConfigProvider  gameconfig.Provider
@@ -37,6 +38,7 @@ type Options struct {
 
 // Server provides an implementation of the PangYa login server.
 type Server struct {
+	log             zerolog.Logger
 	topologyClient  topologypbconnect.TopologyServiceClient
 	accountsService *accounts.Service
 	baseServer      *common.BaseServer
@@ -46,6 +48,7 @@ type Server struct {
 // New creates a new instance of the login server.
 func New(opts Options) *Server {
 	return &Server{
+		log:             opts.Logger.With().Str("server", "login").Logger(),
 		topologyClient:  opts.TopologyClient,
 		accountsService: opts.AccountsService,
 		baseServer:      &common.BaseServer{},
@@ -55,12 +58,11 @@ func New(opts Options) *Server {
 
 // Listen listens for connections on the given port and blocks indefinitely.
 func (s *Server) Listen(ctx context.Context, addr string) error {
-	logger := log.WithField("server", "LoginServer")
-	return s.baseServer.Listen(logger, addr, func(logger *log.Entry, socket net.Conn) error {
+	return s.baseServer.Listen(s.log, addr, func(log zerolog.Logger, socket net.Conn) error {
 		conn := Conn{
 			ServerConn: common.NewServerConn(
 				socket,
-				logger,
+				log,
 				ClientMessageTable,
 				ServerMessageTable,
 			),

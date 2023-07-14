@@ -22,11 +22,12 @@ import (
 	"net/http"
 
 	"github.com/pangbox/server/admin"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type AdminOptions struct {
-	Addr string
+	Logger zerolog.Logger
+	Addr   string
 }
 
 type AdminServer struct {
@@ -40,21 +41,24 @@ func NewAdmin(ctx context.Context) *AdminServer {
 }
 
 func (w *AdminServer) Configure(opts AdminOptions) error {
+	log := opts.Logger
 	spawn := func(ctx context.Context, service *Service) {
-		AdminServer := http.Server{Addr: opts.Addr, Handler: admin.New(admin.Options{})}
+		AdminServer := http.Server{Addr: opts.Addr, Handler: admin.New(admin.Options{
+			Logger: opts.Logger,
+		})}
 
 		service.SetShutdownFunc(func(shutdownCtx context.Context) error {
 			return AdminServer.Shutdown(shutdownCtx)
 		})
 
 		if ctx.Err() != nil {
-			log.Errorf("Admin server cancelled before server could start: %v", ctx.Err())
+			log.Error().Err(ctx.Err()).Msg("cancelled before admin server could start")
 			return
 		}
 
 		err := AdminServer.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			log.Errorf("Error serving admin server: %v", err)
+			log.Error().Err(err).Msg("error serving admin server")
 		}
 	}
 

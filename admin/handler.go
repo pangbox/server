@@ -21,23 +21,26 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type Options struct {
+	Logger zerolog.Logger
 }
 
 type Handler struct {
 	router httprouter.Router
+	log    zerolog.Logger
 }
 
 func New(opt Options) *Handler {
 	return &Handler{
 		router: *httprouter.New(),
+		log:    opt.Logger,
 	}
 }
 
 func (l *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Debugf("ADMIN: %s %s", r.Method, r.URL.String())
+	l.log.Debug().Str("method", r.Method).Str("url", r.URL.String()).Msg("admin http request")
 	l.router.ServeHTTP(w, r)
 }

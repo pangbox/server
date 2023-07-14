@@ -125,7 +125,7 @@ func (c *Conn) leaveMultiplayerLobby(ctx context.Context) error {
 
 // Handle runs the main connection loop.
 func (c *Conn) Handle(ctx context.Context) error {
-	log := c.s.logger
+	log := c.Log()
 
 	// Handle the authentication phase.
 	if err := c.handleAuth(ctx); err != nil {
@@ -166,7 +166,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 
 		switch t := msg.(type) {
 		case *gamepacket.ClientException:
-			log.WithField("exception", t.Message).Debug("Client exception")
+			log.Debug().Str("exception", t.Message.Value).Msg("client exception")
 		case *gamepacket.ClientMessageSend:
 			chatMsg := room.ChatMessage{
 				Nickname: t.Nickname.Value,
@@ -179,10 +179,10 @@ func (c *Conn) Handle(ctx context.Context) error {
 			}
 		case *gamepacket.ClientRequestMessengerList:
 			// TODO
-			log.Debug("TODO: messenger list")
+			log.Debug().Msg("todo: messenger list")
 		case *gamepacket.ClientGetUserOnlineStatus:
 			// TODO
-			log.Debug("TODO: online status")
+			log.Debug().Msg("todo: online status")
 		case *gamepacket.ClientGetPlayerData:
 			player, err := c.s.accountsService.GetPlayer(ctx, int64(t.UserID))
 			if err != nil {
@@ -332,7 +332,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 			}
 			err := c.s.accountsService.UseItem(ctx, c.session.PlayerID, int64(t.ItemTypeID), &c.player)
 			if err != nil {
-				log.WithError(err).Error("using item failed")
+				log.Error().Err(err).Msg("error using item")
 			} else {
 				c.currentRoom.Send(ctx, room.RoomGameShotItemUse{
 					ConnID:     c.connID,
@@ -420,7 +420,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 			if c.currentLobby != nil {
 				break
 			}
-			log.Println("Join Lobby")
+			log.Debug().Msg("join lobby")
 			c.currentLobby = c.s.lobby
 			c.currentLobby.Send(ctx, room.LobbyPlayerJoin{
 				Entry: c.getLobbyPlayer(),
@@ -686,10 +686,10 @@ func (c *Conn) Handle(ctx context.Context) error {
 			})
 		case *gamepacket.Client00C1:
 			// Seems to happen when entering my room.
-			log.Debug("TODO: 00C1 (my room?)")
+			log.Debug().Msg("todo: 00C1 (my room?)")
 		case *gamepacket.ClientUserMacrosSet:
 			// TODO: server-side macro storage
-			log.Debugf("Set macros: %+v", t.MacroList)
+			log.Debug().Msg("todo: set macros")
 		case *gamepacket.ClientEquipmentUpdate:
 			switch {
 			case t.CharParts != nil:
@@ -745,7 +745,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 			case t.Comet != nil:
 				cometID, err := c.s.accountsService.SetComet(ctx, c.player.PlayerID, t.Comet.ItemTypeID, &c.player)
 				if err != nil {
-					log.WithError(err).Errorf("attempt to set comet failed")
+					log.Error().Err(err).Msg("attempt to set comet failed")
 				}
 				if err := c.SendMessage(ctx, &gamepacket.ServerPlayerEquipmentUpdated{
 					Status: 0x04,
@@ -814,7 +814,7 @@ func (c *Conn) Handle(ctx context.Context) error {
 			}
 		case *gamepacket.Client00FE:
 			// TODO
-			log.Debug("TODO: 00FE")
+			log.Debug().Msg("todo: 00FE")
 		case *gamepacket.ClientShopJoin:
 			c.SendMessage(ctx, &gamepacket.Server020E{})
 		case *gamepacket.ClientBuyItem:

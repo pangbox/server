@@ -21,10 +21,10 @@ import (
 	"net"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
-type BaseHandlerFunc func(*log.Entry, net.Conn) error
+type BaseHandlerFunc func(zerolog.Logger, net.Conn) error
 
 type BaseServer struct {
 	mu sync.RWMutex
@@ -43,7 +43,7 @@ func (b *BaseServer) setListener(l net.Listener) {
 // Listen implements a basic TCP server connection loop, dispatching connections
 // to the handle function. It has some basic provisions for logging and error
 // handling as well.
-func (b *BaseServer) Listen(logger *log.Entry, addr string, handler BaseHandlerFunc) error {
+func (b *BaseServer) Listen(log zerolog.Logger, addr string, handler BaseHandlerFunc) error {
 	var err error
 
 	listener, err := net.Listen("tcp", addr)
@@ -59,19 +59,19 @@ func (b *BaseServer) Listen(logger *log.Entry, addr string, handler BaseHandlerF
 			return err
 		}
 		go func() {
-			logger := logger.WithFields(log.Fields{"addr": socket.RemoteAddr()})
-			logger.Info("Entering connection thread.")
+			log := log.With().Str("remote address", socket.RemoteAddr().String()).Logger()
+			log.Info().Msg("entering connection thread")
 			defer func() {
 				if r := recover(); r != nil {
-					logger.WithField("error", r).Error("PANIC in connection")
+					log.Error().Any(zerolog.ErrorFieldName, r).Msg("panic in connection")
 				}
-				logger.Info("Exiting connection thread.")
+				log.Info().Msg("exiting connection thread")
 				if err := socket.Close(); err != nil {
-					logger.WithError(err).Warning("error closing socket")
+					log.Warn().Err(err).Msg("error closing socket")
 				}
 			}()
-			if err := handler(logger, socket); err != nil {
-				logger.WithError(err).Error("ERROR in connection")
+			if err := handler(log, socket); err != nil {
+				log.Error().Err(err).Msg("error in connection")
 			}
 		}()
 	}

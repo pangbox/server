@@ -20,7 +20,6 @@ package common
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"io"
 	"math/rand"
 	"net"
@@ -29,7 +28,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/go-restruct/restruct"
 	"github.com/pangbox/pangcrypt"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type HelloMessage interface {
@@ -42,7 +41,7 @@ type ServerConn[ClientMsg Message, ServerMsg Message] struct {
 
 	socket net.Conn
 	key    uint8
-	log    *log.Entry
+	log    zerolog.Logger
 
 	ClientMsg MessageTable[ClientMsg]
 	ServerMsg MessageTable[ServerMsg]
@@ -50,7 +49,7 @@ type ServerConn[ClientMsg Message, ServerMsg Message] struct {
 
 func NewServerConn[C Message, S Message](
 	socket net.Conn,
-	log *log.Entry,
+	log zerolog.Logger,
 	clientMsg MessageTable[C],
 	serverMsg MessageTable[S],
 ) *ServerConn[C, S] {
@@ -69,8 +68,8 @@ func (c *ServerConn[_, _]) RemoteAddr() net.Addr {
 	return c.socket.RemoteAddr()
 }
 
-// Log returns a log.Entry for logging.
-func (c *ServerConn[_, _]) Log() *log.Entry {
+// Log returns a zerolog.Logger for logging.
+func (c *ServerConn[_, _]) Log() zerolog.Logger {
 	return c.log
 }
 
@@ -122,8 +121,6 @@ func (c *ServerConn[_, _]) ReadPacket() ([]byte, error) {
 // ParsePacket attempts to construct a packet from packet data.
 func (c *ServerConn[ClientMsg, _]) ParsePacket(packet []byte) (ClientMsg, error) {
 	msgid := binary.LittleEndian.Uint16(packet[:2])
-
-	c.log.Debug(hex.Dump(packet))
 
 	message, err := c.ClientMsg.Build(msgid)
 	if err != nil {

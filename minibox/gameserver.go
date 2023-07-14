@@ -25,10 +25,11 @@ import (
 	"github.com/pangbox/server/gameconfig"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	"github.com/pangbox/server/pangya/iff"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type GameOptions struct {
+	Logger          zerolog.Logger
 	Addr            string
 	TopologyClient  topologypbconnect.TopologyServiceClient
 	AccountsService *accounts.Service
@@ -48,8 +49,10 @@ func NewGameServer(ctx context.Context) *GameServer {
 }
 
 func (g *GameServer) Configure(opts GameOptions) error {
+	log := opts.Logger
 	spawn := func(ctx context.Context, service *Service) {
 		gameServer := gameserver.New(gameserver.Options{
+			Logger:          opts.Logger,
 			TopologyClient:  opts.TopologyClient,
 			AccountsService: opts.AccountsService,
 			PangyaIFF:       opts.PangyaIFF,
@@ -63,13 +66,13 @@ func (g *GameServer) Configure(opts GameOptions) error {
 		})
 
 		if ctx.Err() != nil {
-			log.Errorf("GameServer cancelled before server could start: %v", ctx.Err())
+			log.Error().Err(ctx.Err()).Msg("cancelled before game server could start")
 			return
 		}
 
 		err := gameServer.Listen(ctx, opts.Addr)
 		if err != nil {
-			log.Errorf("Error serving GameServer: %v", err)
+			log.Error().Err(err).Msg("error serving game server")
 		}
 	}
 

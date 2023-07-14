@@ -30,12 +30,12 @@ import (
 	"github.com/pangbox/pangfiles/crypto/pyxtea"
 	"github.com/pangbox/pangfiles/encoding/litexml"
 	"github.com/pangbox/pangfiles/updatelist"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 func (l *Handler) handleUpdateList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	if err := l.updateHandler.updateList(w); err != nil {
-		log.Printf("Error writing updateList: %v", err)
+		l.log.Error().Err(err).Msg("error writing updateList")
 
 		w.WriteHeader(500)
 		w.Write([]byte("server error"))
@@ -49,6 +49,8 @@ type updateListCacheEntry struct {
 }
 
 type updateHandler struct {
+	log zerolog.Logger
+
 	key pyxtea.Key
 
 	dir string
@@ -59,8 +61,9 @@ type updateHandler struct {
 	mutex sync.RWMutex
 }
 
-func newUpdateListHandler(key pyxtea.Key, dir string) *updateHandler {
+func newUpdateListHandler(log zerolog.Logger, key pyxtea.Key, dir string) *updateHandler {
 	ul := &updateHandler{
+		log:   log,
 		key:   key,
 		dir:   dir,
 		cache: map[string]updateListCacheEntry{},
@@ -80,7 +83,7 @@ func (s *updateHandler) calcEntry(wg *sync.WaitGroup, entry *updatelist.FileInfo
 	*entry, err = updatelist.MakeFileInfo(s.dir, "", f, f.Size())
 
 	if err != nil {
-		log.Printf("Error calculating entry for %s: %s", name, err)
+		s.log.Error().Str("filename", name).Err(err).Msg("error calculating entry")
 		entry.Filename = name
 	} else {
 		s.mutex.Lock()
@@ -147,7 +150,7 @@ func (s *updateHandler) updateList(rw io.Writer) error {
 		}
 	}
 	if doc.UpdateFiles.Count == 0 {
-		log.Errorf("Did not find pak files; did you set -pangya_dir?")
+		s.log.Error().Msg("did not find pak files; did you set -pangya_dir?")
 	}
 
 	wg.Wait()
@@ -161,6 +164,6 @@ func (s *updateHandler) updateList(rw io.Writer) error {
 		return err
 	}
 
-	log.Printf("Updatelist calculated in %s (cache hits: %d, misses: %d)", time.Since(start), hit, miss)
+	s.log.Printf("updatelist calculated in %s (cache hits: %d, misses: %d)", time.Since(start), hit, miss)
 	return nil
 }

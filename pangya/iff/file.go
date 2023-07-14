@@ -27,7 +27,7 @@ import (
 
 	"github.com/go-restruct/restruct"
 	"github.com/pangbox/pangfiles/pak"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type Archive struct {
@@ -46,22 +46,22 @@ var iffSearchOrder = []string{
 	"pangya.iff", // kr (present in some gb ver too)
 }
 
-func LoadFromPak(fs pak.FS) (*Archive, error) {
+func LoadFromPak(log zerolog.Logger, fs pak.FS) (*Archive, error) {
 	data, err := findPangYaIFF(fs)
 	if err != nil {
 		return nil, err
 	}
-	return Load(data)
+	return Load(log, data)
 }
 
-func Load(data []byte) (*Archive, error) {
+func Load(log zerolog.Logger, data []byte) (*Archive, error) {
 	archive := &Archive{}
 	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return nil, err
 	}
 	for _, f := range r.File {
-		log.Debugf("Found IFF: %s", f.Name)
+		log.Debug().Str("file", f.Name).Msg("found IFF")
 		if f.Name == "Item.iff" {
 			r, err := f.Open()
 			if err != nil {

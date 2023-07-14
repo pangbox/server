@@ -24,10 +24,11 @@ import (
 	"github.com/pangbox/server/gameconfig"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	"github.com/pangbox/server/login"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type LoginOptions struct {
+	Logger          zerolog.Logger
 	Addr            string
 	TopologyClient  topologypbconnect.TopologyServiceClient
 	AccountsService *accounts.Service
@@ -44,8 +45,10 @@ func NewLoginServer(ctx context.Context) *LoginServer {
 }
 
 func (l *LoginServer) Configure(opts LoginOptions) error {
+	log := opts.Logger
 	spawn := func(ctx context.Context, service *Service) {
 		loginServer := login.New(login.Options{
+			Logger:          opts.Logger,
 			TopologyClient:  opts.TopologyClient,
 			AccountsService: opts.AccountsService,
 			ConfigProvider:  gameconfig.Default(),
@@ -56,13 +59,13 @@ func (l *LoginServer) Configure(opts LoginOptions) error {
 		})
 
 		if ctx.Err() != nil {
-			log.Errorf("LoginServer cancelled before server could start: %v", ctx.Err())
+			log.Error().Err(ctx.Err()).Msg("cancelled before login server could start")
 			return
 		}
 
 		err := loginServer.Listen(ctx, opts.Addr)
 		if err != nil {
-			log.Errorf("Error serving LoginServer: %v", err)
+			log.Error().Err(err).Msg("error serving login server")
 		}
 	}
 

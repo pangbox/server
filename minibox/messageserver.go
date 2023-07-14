@@ -23,10 +23,11 @@ import (
 	"github.com/pangbox/server/database/accounts"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	"github.com/pangbox/server/message"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type MessageOptions struct {
+	Logger          zerolog.Logger
 	Addr            string
 	TopologyClient  topologypbconnect.TopologyServiceClient
 	AccountsService *accounts.Service
@@ -43,8 +44,10 @@ func NewMessageServer(ctx context.Context) *MessageServer {
 }
 
 func (m *MessageServer) Configure(opts MessageOptions) error {
+	log := opts.Logger
 	spawn := func(ctx context.Context, service *Service) {
 		messageServer := message.New(message.Options{
+			Logger:          opts.Logger,
 			TopologyClient:  opts.TopologyClient,
 			AccountsService: opts.AccountsService,
 		})
@@ -54,13 +57,13 @@ func (m *MessageServer) Configure(opts MessageOptions) error {
 		})
 
 		if ctx.Err() != nil {
-			log.Errorf("MessageServer cancelled before server could start: %v", ctx.Err())
+			log.Error().Err(ctx.Err()).Msg("cancelled before message server could start")
 			return
 		}
 
 		err := messageServer.Listen(ctx, opts.Addr)
 		if err != nil {
-			log.Errorf("Error serving MessageServer: %v", err)
+			log.Error().Err(err).Msg("error serving message server")
 		}
 	}
 

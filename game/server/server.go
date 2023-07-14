@@ -28,11 +28,12 @@ import (
 	"github.com/pangbox/server/gameconfig"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
 	"github.com/pangbox/server/pangya/iff"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 // Options specify the options used to construct the game server.
 type Options struct {
+	Logger          zerolog.Logger
 	TopologyClient  topologypbconnect.TopologyServiceClient
 	AccountsService *accounts.Service
 	PangyaIFF       *iff.Archive
@@ -43,6 +44,7 @@ type Options struct {
 
 // Server provides an implementation of the PangYa game server.
 type Server struct {
+	log             zerolog.Logger
 	baseServer      *common.BaseServer
 	topologyClient  topologypbconnect.TopologyServiceClient
 	accountsService *accounts.Service
@@ -51,14 +53,12 @@ type Server struct {
 	channelName     string
 	configProvider  gameconfig.Provider
 	lobby           *room.Lobby
-	logger          *log.Entry
 	papelShop       *WeightedRand
 	papelRarity     map[uint32]uint32
 }
 
 // New creates a new instance of the game server.
 func New(opts Options) *Server {
-	logger := log.WithField("server", "GameServer")
 	papelShop := NewWeightedRand()
 	papelRarity := make(map[uint32]uint32)
 	for _, item := range opts.ConfigProvider.GetPapelShopOdds() {
@@ -66,6 +66,7 @@ func New(opts Options) *Server {
 		papelRarity[item.TypeID] = uint32(item.Rarity)
 	}
 	return &Server{
+		log:             opts.Logger.With().Str("server", "game").Logger(),
 		baseServer:      &common.BaseServer{},
 		topologyClient:  opts.TopologyClient,
 		accountsService: opts.AccountsService,
@@ -73,7 +74,6 @@ func New(opts Options) *Server {
 		serverID:        opts.ServerID,
 		channelName:     opts.ChannelName,
 		configProvider:  opts.ConfigProvider,
-		logger:          logger,
 		papelShop:       papelShop,
 		papelRarity:     papelRarity,
 	}
@@ -81,12 +81,12 @@ func New(opts Options) *Server {
 
 // Listen listens for connections on a given address and blocks indefinitely.
 func (s *Server) Listen(ctx context.Context, addr string) error {
-	s.lobby = room.NewLobby(ctx, s.logger, s.accountsService, s.configProvider)
-	return s.baseServer.Listen(s.logger, addr, func(logger *log.Entry, socket net.Conn) error {
+	s.lobby = room.NewLobby(ctx, s.log, s.accountsService, s.configProvider)
+	return s.baseServer.Listen(s.log, addr, func(log zerolog.Logger, socket net.Conn) error {
 		conn := Conn{
 			ServerConn: common.NewServerConn(
 				socket,
-				logger,
+				log,
 				gamepacket.ClientMessageTable,
 				gamepacket.ServerMessageTable,
 			),

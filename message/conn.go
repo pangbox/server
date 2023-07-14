@@ -46,11 +46,11 @@ func (c *Conn) Handle() error {
 	for {
 		msg, err := c.ReadMessage()
 		if err != nil {
-			log.WithError(err).Error("Error receiving packet")
+			log.Error().Err(err).Msg("error receiving packet")
 			return err
 		}
 
 		// TODO: messageng needs impl; should probably use old message server for now?
-		log.Printf("%#v\n", msg)
+		log.Debug().Msgf("todo: recieved %T", msg)
 	}
 }

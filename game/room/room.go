@@ -32,7 +32,7 @@ import (
 	gamemodel "github.com/pangbox/server/game/model"
 	gamepacket "github.com/pangbox/server/game/packet"
 	"github.com/pangbox/server/pangya"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
@@ -40,6 +40,7 @@ import (
 
 type Room struct {
 	actor.Base[RoomEvent]
+	log      zerolog.Logger
 	state    gamemodel.RoomState
 	players  *orderedmap.OrderedMap[uint32, RoomPlayer]
 	lobby    *Lobby
@@ -318,7 +319,7 @@ func (r *Room) handlePlayerJoin(ctx context.Context, event RoomPlayerJoin) error
 
 	err := r.broadcastPlayerList(ctx)
 	if err != nil {
-		log.WithError(err).Error("error broadcasting room status")
+		r.log.Error().Err(err).Msg("error broadcasting room status")
 	}
 
 	r.state.NumUsers = uint8(r.players.Len())
@@ -645,7 +646,7 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 	} else {
 		// TODO: this is inefficient, also does nothing terribly useful.
 		if !reflect.DeepEqual(*r.state.ShotSync, syncData) {
-			log.Warningf("Shot sync mismatch: %#v vs %#v", r.state.ShotSync, syncData)
+			r.log.Warn().Msgf("Shot sync mismatch: %#v vs %#v", r.state.ShotSync, syncData)
 		}
 	}
 	if pair := r.players.GetPair(event.ConnID); pair != nil {
@@ -667,7 +668,7 @@ func (r *Room) handleRoomGameShotSync(ctx context.Context, event RoomGameShotSyn
 			dy := float64(r.currentHole().PinZ) - float64(r.state.ShotSync.Z)
 			pair.Value.Distance = math.Sqrt(dx*dx + dy*dy)
 		} else {
-			log.WithField("ConnID", r.state.ShotSync.ActiveConnID).Warn("couldn't find conn")
+			r.log.Warn().Uint32("active connection id", r.state.ShotSync.ActiveConnID).Msg("couldn't find connection")
 		}
 		for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
 			pair.Value.ShotSync = nil
@@ -751,7 +752,7 @@ func (r *Room) getNextPlayer() *RoomPlayer {
 		}
 	}
 	if nextPlayer != nil {
-		log.Printf("next player: %s, with distance: %f", nextPlayer.Entry.Nickname, nextPlayer.Distance)
+		r.log.Debug().Msgf("next player: %s, with distance: %f", nextPlayer.Entry.Nickname, nextPlayer.Distance)
 	}
 	// Note: can return nil if everyone has holed out.
 	return nextPlayer
@@ -776,7 +777,7 @@ func (r *Room) setupNextTurnOrder() {
 	players := []*RoomPlayer{}
 	for pair := r.players.Oldest(); pair != nil; pair = pair.Next() {
 		players = append(players, &pair.Value)
-		log.Printf("before: %s: last=%d, order=%d", pair.Value.Entry.Nickname, pair.Value.LastTotal, pair.Value.TurnOrder)
+		r.log.Printf("before: %s: last=%d, order=%d", pair.Value.Entry.Nickname, pair.Value.LastTotal, pair.Value.TurnOrder)
 	}
 	slices.SortFunc(players, func(a, b *RoomPlayer) bool {
 		// If two players tied on last hole, they should maintain their previous
@@ -789,7 +790,7 @@ func (r *Room) setupNextTurnOrder() {
 	for i, player := range players {
 		player.TurnOrder = i
 		player.Distance = math.Inf(1)
-		log.Printf("after: %s: last=%d, order=%d", player.Entry.Nickname, player.LastTotal, player.TurnOrder)
+		r.log.Printf("after: %s: last=%d, order=%d", player.Entry.Nickname, player.LastTotal, player.TurnOrder)
 	}
 }
 
@@ -816,16 +817,16 @@ func (r *Room) endGame(ctx context.Context) error {
 
 		newPang, err := r.accounts.AddPang(ctx, int64(pair.Value.Entry.PlayerID), int64(totalPang))
 		if err != nil {
-			log.WithError(err).Error("failed giving game-ending pang")
+			r.log.Error().Err(err).Msg("failed giving game-ending pang")
 		}
 
 		_, _, err = r.accounts.AddExp(ctx, int64(pair.Value.Entry.PlayerID), exp)
 		if err != nil {
-			log.WithError(err).Error("failed giving game-ending exp")
+			r.log.Error().Err(err).Msg("failed giving game-ending exp")
 		}
 
 		if err := pair.Value.Conn.SendMessage(ctx, &gamepacket.ServerPangBalanceData{PangsRemaining: uint64(newPang)}); err != nil {
-			log.WithError(err).Error("failed informing player of game-ending pang")
+			r.log.Error().Err(err).Msg("failed informing player of game-ending pang")
 		}
 
 		// Tell conn to update player so that it sees new EXP/etc.
@@ -900,7 +901,7 @@ func (r *Room) startHole(ctx context.Context) error {
 	})
 	nextPlayer := r.getNextPlayer()
 	if nextPlayer == nil {
-		log.Error("nextPlayer == nil in startHole?")
+		r.log.Error().Msg("nextPlayer == nil in startHole?")
 		return nil
 	}
 	r.state.ActiveConnID = nextPlayer.Entry.ConnID

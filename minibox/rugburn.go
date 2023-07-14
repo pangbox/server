@@ -26,14 +26,18 @@ import (
 
 	"github.com/pangbox/rugburn/slipstrm/embedded"
 	"github.com/pangbox/rugburn/slipstrm/patcher"
+	"github.com/rs/zerolog"
 )
 
 type RugburnOptions struct {
+	Logger    zerolog.Logger
 	PangyaDir string
 }
 
 type RugburnPatcher struct {
 	mu sync.RWMutex
+	// +checklocks:mu
+	log zerolog.Logger
 
 	// +checklocks:mu
 	path string
@@ -56,6 +60,7 @@ func (p *RugburnPatcher) Configure(opts RugburnOptions) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	p.log = opts.Logger
 	p.path = filepath.Join(opts.PangyaDir, "ijl15.dll")
 }
 
@@ -132,8 +137,7 @@ func (p *RugburnPatcher) Patch() error {
 			return errors.New("couldn't recover original ijl15.dll for patching")
 		}
 	}
-
-	rugburn, err := patcher.Patch(log.Default(), ijl15, embedded.RugburnDLL, embedded.Version)
+	rugburn, err := patcher.Patch(log.New(p.log, "", 0), ijl15, embedded.RugburnDLL, embedded.Version)
 	if err != nil {
 		return err
 	}

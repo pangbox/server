@@ -28,7 +28,7 @@ import (
 	"github.com/pangbox/server/common/hash"
 	"github.com/pangbox/server/gen/dbmodels"
 	"github.com/pangbox/server/pangya"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 // Enumeration of possible errors that can be returned from authenticate.
@@ -41,12 +41,14 @@ const sessionTimeout = 15 * time.Minute
 
 // Options specifies options for account services.
 type Options struct {
+	Logger   zerolog.Logger
 	Database *sql.DB
 	Hasher   hash.Hasher
 }
 
 // Service implements account services using the database.
 type Service struct {
+	log     zerolog.Logger
 	db      *sql.DB
 	queries *dbmodels.Queries
 	hasher  hash.Hasher
@@ -55,6 +57,7 @@ type Service struct {
 // NewService creates new account services using the database.
 func NewService(opts Options) *Service {
 	return &Service{
+		log:     opts.Logger,
 		db:      opts.Database,
 		queries: dbmodels.New(opts.Database),
 		hasher:  opts.Hasher,
@@ -316,18 +319,21 @@ func (s *Service) decrementConsumableQuantityWith(ctx context.Context, tx *dbmod
 		// Items without quantities are not consumable and can't be equipped here.
 		return 0, errors.New("invalid item quantity in inventory")
 	} else if quantity > 1 {
-		_, err := tx.SetItemQuantity(ctx, dbmodels.SetItemQuantityParams{
+		newValue, err := tx.SetItemQuantity(ctx, dbmodels.SetItemQuantityParams{
 			PlayerID: playerID,
 			ItemID:   item.ItemID,
 			Quantity: sql.NullInt64{Int64: quantity - 1, Valid: true},
 		})
-		log.Printf("decrement consumable quantity: %d to %d", quantity, quantity-1)
+		s.log.Debug().
+			Int64("old quantity", quantity).
+			Int64("new quantity", newValue.Quantity.Int64).
+			Msg("decrement consumable quantity")
 		if err != nil {
 			return 0, err
 		}
 		return item.ItemID, nil
 	} else {
-		log.Printf("remove consumable")
+		s.log.Debug().Msg("remove consumable")
 		return item.ItemID, tx.RemoveItemFromInventory(ctx, dbmodels.RemoveItemFromInventoryParams{
 			PlayerID: playerID,
 			ItemID:   item.ItemID,
@@ -352,7 +358,7 @@ func (s *Service) incrementConsumableQuantityWith(ctx context.Context, tx *dbmod
 			Quantity:   sql.NullInt64{Valid: true, Int64: amount},
 		})
 		if err != nil {
-			return fmt.Errorf("adding item to inventory: %w", err)
+			s.log.Error().Err(err).Msg("adding item to inventory")
 		}
 		return nil
 	}
@@ -617,7 +623,7 @@ func (s *Service) getDecorationIDWith(ctx context.Context, tx *dbmodels.Queries,
 		return sql.NullInt64{}, err
 	}
 	if len(items) == 0 {
-		log.Warningf("missing decoration 0x%08x", typeID)
+		s.log.Warn().Msgf("missing decoration 0x%08x", typeID)
 		return sql.NullInt64{}, nil
 	}
 	return sql.NullInt64{Valid: true, Int64: items[0].ItemID}, nil

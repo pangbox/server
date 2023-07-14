@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -33,6 +32,7 @@ import (
 	gamepacket "github.com/pangbox/server/game/packet"
 	"github.com/pangbox/server/login"
 	"github.com/pangbox/server/message"
+	"github.com/rs/zerolog"
 )
 
 func GetMessageTable(server string, origin string) (common.AnyMessageTable, error) {
@@ -69,7 +69,7 @@ func GetMessageTable(server string, origin string) (common.AnyMessageTable, erro
 	}
 }
 
-func ParseHex(input []byte) []byte {
+func ParseHex(input []byte) ([]byte, error) {
 	output := []byte{}
 
 	for i, n := range strings.Split(string(input), ",") {
@@ -79,18 +79,24 @@ func ParseHex(input []byte) []byte {
 		}
 		v, err := strconv.ParseUint(n, 0, 8)
 		if err != nil {
-			log.Fatalf("Unexpected sequence %d in hex string: %q", i, n)
+			return nil, fmt.Errorf("unexpected sequence %d in hex string: %q", i, n)
 		}
 		output = append(output, byte(v))
 	}
 
-	return output
+	return output, nil
 }
 
 func main() {
 	var err error
 	hex := flag.Bool("hex", false, "If set, parse hex input.")
 	flag.Parse()
+
+	log := zerolog.
+		New(zerolog.ConsoleWriter{Out: os.Stderr}).
+		With().
+		Timestamp().
+		Logger()
 
 	args := flag.Args()
 
@@ -104,47 +110,53 @@ func main() {
 	if len(args) == 3 && args[2] != "-" {
 		input, err = os.Open(args[2])
 		if err != nil {
-			log.Fatalf("Error opening input file: %v", err)
+			log.Fatal().Err(err).Msg("error opening input file")
 		}
 	}
 
 	messageTable, err := GetMessageTable(args[0], args[1])
 	if err != nil {
-		log.Fatalf("Error getting message table: %v", err)
+		log.Fatal().Err(err).Msg("error getting message table")
 	}
 
 	var packet []byte
 
 	packet, err = io.ReadAll(input)
 	if err != nil {
-		log.Fatalf("Error reading input: %v", err)
+		log.Fatal().Err(err).Msg("error reading input")
 	}
 
 	if *hex {
-		packet = ParseHex(packet)
+		packet, err = ParseHex(packet)
+		if err != nil {
+			log.Fatal().Err(err).Msg("error parsing hex")
+		}
 	}
 
 	msgid := binary.LittleEndian.Uint16(packet[:2])
 
 	message, err := messageTable.Build(msgid)
 	if err != nil {
-		log.Fatalf("Error building packet: %v", err)
+		log.Fatal().Err(err).Msg("error building packet")
 	}
 
 	err = restruct.Unpack(packet[2:], binary.LittleEndian, message)
 	if err != nil {
-		log.Fatalf("Error parsing packet: %v; partial result: %s; data: % 02x", err, spew.Sdump(message), packet)
+		fmt.Fprintln(os.Stderr, "-----BEGIN PARTIAL DATA-----")
+		spew.Fdump(os.Stderr, message)
+		fmt.Fprintln(os.Stderr, "-----END PARTIAL DATA-----")
+		log.Fatal().Err(err).Msg("error parsing packet")
 	}
 
 	spew.Dump(message)
 
 	sz, err := restruct.SizeOf(message)
 	if err != nil {
-		log.Fatalf("Error getting packet size: %v", err)
+		log.Fatal().Err(err).Msg("error getting packet size")
 	}
 
 	if sz != len(packet[2:]) {
 		extra := len(packet[2:]) - sz
-		log.Printf("WARNING: %d (%08x) extra bytes... (%d total, %d parsed)", extra, extra, len(packet[2:]), sz)
+		log.Warn().Msgf("warning: %[1]d (%[1]08x) extra bytes... (%d total, %d parsed)", extra, len(packet[2:]), sz)
 	}
 }

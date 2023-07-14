@@ -26,7 +26,7 @@ import (
 	"github.com/pangbox/server/database"
 	_ "github.com/pangbox/server/migrations"
 	"github.com/pressly/goose/v3"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"github.com/xo/dburl"
 	_ "modernc.org/sqlite"
 )
@@ -54,6 +54,12 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
+	log := zerolog.
+		New(zerolog.ConsoleWriter{Out: os.Stderr}).
+		With().
+		Timestamp().
+		Logger()
+
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, usageString, os.Args[0])
 		flag.CommandLine.PrintDefaults()
@@ -62,17 +68,19 @@ func main() {
 
 	url, err := dburl.Parse(*dbstring)
 	if err != nil {
-		log.Fatalf("error parsing URL: %v", err)
+		log.Fatal().Err(err).Msg("error parsing database URL")
 	}
+
+	database.SetLogger(log)
 
 	db, err := database.OpenDBWithDriver(url.Driver, url.DSN)
 	if err != nil {
-		log.Fatalf("goose: failed to open DB: %v\n", err)
+		log.Fatal().Err(err).Msg("error opening database")
 	}
 
 	defer func() {
 		if err := db.Close(); err != nil {
-			log.Fatalf("goose: failed to close DB: %v\n", err)
+			log.Fatal().Err(err).Msg("error closing database")
 		}
 	}()
 
@@ -82,6 +90,6 @@ func main() {
 	}
 
 	if err := goose.Run(args[0], db, ".", arguments...); err != nil {
-		log.Fatalf("goose %v: %v", args[0], err)
+		log.Fatal().Err(err).Msg("goose error")
 	}
 }

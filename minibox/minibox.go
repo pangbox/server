@@ -33,7 +33,7 @@ import (
 	_ "github.com/pangbox/server/migrations"
 	"github.com/pangbox/server/pangya/iff"
 	"github.com/pressly/goose/v3"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"github.com/xo/dburl"
 	_ "modernc.org/sqlite"
 )
@@ -59,7 +59,7 @@ type Options struct {
 
 type Server struct {
 	mu  sync.RWMutex
-	log *log.Entry // +checklocksignore
+	log zerolog.Logger // +checklocksignore
 
 	// Fabric services
 	// +checklocks:mu
@@ -97,26 +97,7 @@ type Server struct {
 	lastOpts *Options
 }
 
-func topologyOptions(opts Options) (TopologyServerOptions, error) {
-	gamePort, err := getPort(opts.GameAddr)
-	if err != nil {
-		return TopologyServerOptions{}, fmt.Errorf("failed to parse game server address: %s", opts.GameAddr)
-	}
-
-	messagePort, err := getPort(opts.MessageAddr)
-	if err != nil {
-		return TopologyServerOptions{}, fmt.Errorf("failed to parse message server address: %s", opts.GameAddr)
-	}
-
-	return TopologyServerOptions{
-		ServerIP:       opts.ServerIP,
-		GameServerName: opts.GameServerName,
-		GamePort:       gamePort,
-		MessagePort:    messagePort,
-	}, nil
-}
-
-func dbConnectMigrate(urlstr string) (*sql.DB, error) {
+func dbConnectMigrate(log zerolog.Logger, urlstr string) (*sql.DB, error) {
 	url, err := dburl.Parse(urlstr)
 	if err != nil {
 		return nil, fmt.Errorf("parsing database URL: %w", err)
@@ -127,6 +108,8 @@ func dbConnectMigrate(urlstr string) (*sql.DB, error) {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 
+	database.SetLogger(log)
+
 	if err := goose.Up(db, "."); err != nil {
 		return nil, fmt.Errorf("running database migrations: %w", err)
 	}
@@ -134,7 +117,7 @@ func dbConnectMigrate(urlstr string) (*sql.DB, error) {
 	return db, nil
 }
 
-func NewServer(ctx context.Context, log *log.Entry) *Server {
+func NewServer(ctx context.Context, log zerolog.Logger) *Server {
 	server := new(Server)
 	server.log = log
 	server.Topology = NewLocalTopology(ctx)
@@ -160,7 +143,7 @@ func (server *Server) ConfigureDatabase(opts DataOptions) error {
 		return nil
 	}
 
-	db, err := dbConnectMigrate(opts.DatabaseURI)
+	db, err := dbConnectMigrate(server.log, opts.DatabaseURI)
 	if err != nil {
 		return fmt.Errorf("setting up database: %w", err)
 	}
@@ -168,6 +151,7 @@ func (server *Server) ConfigureDatabase(opts DataOptions) error {
 	db.SetMaxOpenConns(1)
 
 	server.accountsService = accounts.NewService(accounts.Options{
+		Logger:   server.log,
 		Database: db,
 		Hasher:   hash.Bcrypt{},
 	})
@@ -209,7 +193,7 @@ func (server *Server) ConfigureServices(opts Options) error {
 			return err
 		}
 
-		server.pangyaIFF, err = iff.LoadFromPak(*server.pangyaFS)
+		server.pangyaIFF, err = iff.LoadFromPak(server.log, *server.pangyaFS)
 		if err != nil {
 			return err
 		}
@@ -218,7 +202,7 @@ func (server *Server) ConfigureServices(opts Options) error {
 	}
 
 	if server.lastOpts.ShouldConfigureTopology(opts) {
-		topologyOptions, err := topologyOptions(opts)
+		topologyOptions, err := server.topologyOptions(opts)
 		if err != nil {
 			return fmt.Errorf("configuring topology server: %w", err)
 		}
@@ -230,6 +214,7 @@ func (server *Server) ConfigureServices(opts Options) error {
 
 	if server.lastOpts.ShouldConfigureWeb(opts) {
 		if err := server.Web.Configure(WebOptions{
+			Logger:          server.log,
 			Addr:            opts.WebAddr,
 			PangyaKey:       server.pangyaKey,
 			PangyaDir:       opts.PangyaDir,
@@ -241,7 +226,8 @@ func (server *Server) ConfigureServices(opts Options) error {
 
 	if server.lastOpts.ShouldConfigureAdmin(opts) {
 		if err := server.Admin.Configure(AdminOptions{
-			Addr: opts.AdminAddr,
+			Logger: server.log,
+			Addr:   opts.AdminAddr,
 		}); err != nil {
 			return fmt.Errorf("configuring web server: %w", err)
 		}
@@ -249,7 +235,8 @@ func (server *Server) ConfigureServices(opts Options) error {
 
 	if server.lastOpts.ShouldConfigureQAAuth(opts) {
 		if err := server.QAAuth.Configure(QAAuthOptions{
-			Addr: opts.QAAuthAddr,
+			Logger: server.log,
+			Addr:   opts.QAAuthAddr,
 		}); err != nil {
 			return fmt.Errorf("configuring QA auth server: %w", err)
 		}
@@ -257,6 +244,7 @@ func (server *Server) ConfigureServices(opts Options) error {
 
 	if server.lastOpts.ShouldConfigureLogin(opts) {
 		if err := server.Login.Configure(LoginOptions{
+			Logger:          server.log,
 			Addr:            opts.LoginAddr,
 			TopologyClient:  server.Topology.Client(),
 			AccountsService: server.accountsService,
@@ -267,6 +255,7 @@ func (server *Server) ConfigureServices(opts Options) error {
 
 	if server.lastOpts.ShouldConfigureGame(opts) {
 		if err := server.Game.Configure(GameOptions{
+			Logger:          server.log,
 			Addr:            opts.GameAddr,
 			TopologyClient:  server.Topology.Client(),
 			AccountsService: server.accountsService,
@@ -280,6 +269,7 @@ func (server *Server) ConfigureServices(opts Options) error {
 
 	if server.lastOpts.ShouldConfigureMessage(opts) {
 		if err := server.Message.Configure(MessageOptions{
+			Logger:          server.log,
 			Addr:            opts.MessageAddr,
 			TopologyClient:  server.Topology.Client(),
 			AccountsService: server.accountsService,
@@ -289,6 +279,7 @@ func (server *Server) ConfigureServices(opts Options) error {
 	}
 
 	server.Rugburn.Configure(RugburnOptions{
+		Logger:    server.log,
 		PangyaDir: opts.PangyaDir,
 	})
 
@@ -378,4 +369,24 @@ func (options *Options) ShouldConfigureTopology(newOpts Options) bool {
 		options.MessageAddr != newOpts.MessageAddr ||
 		options.ServerIP != newOpts.ServerIP ||
 		options.GameServerName != newOpts.GameServerName)
+}
+
+func (server *Server) topologyOptions(opts Options) (TopologyServerOptions, error) {
+	gamePort, err := getPort(opts.GameAddr)
+	if err != nil {
+		return TopologyServerOptions{}, fmt.Errorf("failed to parse game server address: %s", opts.GameAddr)
+	}
+
+	messagePort, err := getPort(opts.MessageAddr)
+	if err != nil {
+		return TopologyServerOptions{}, fmt.Errorf("failed to parse message server address: %s", opts.GameAddr)
+	}
+
+	return TopologyServerOptions{
+		Logger:         server.log,
+		ServerIP:       opts.ServerIP,
+		GameServerName: opts.GameServerName,
+		GamePort:       gamePort,
+		MessagePort:    messagePort,
+	}, nil
 }

@@ -21,14 +21,21 @@ import (
 	"net/http"
 	"strconv"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
-type Listener struct {
+type Options struct {
+	Logger zerolog.Logger
 }
 
-func New() *Listener {
-	return &Listener{}
+type Listener struct {
+	log zerolog.Logger
+}
+
+func New(opts Options) *Listener {
+	return &Listener{
+		log: opts.Logger,
+	}
 }
 
 func serveData(w http.ResponseWriter, data []byte) {
@@ -37,7 +44,7 @@ func serveData(w http.ResponseWriter, data []byte) {
 }
 
 func (l *Listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.Method, r.URL.String())
+	l.log.Debug().Str("method", r.Method).Str("url", r.URL.String()).Msg("qa auth http request")
 	switch r.URL.Path {
 	case "/Secure/Login/LoginForGame.php", "/qalogin":
 		serveData(w, ([]byte)(`<result>true</result><AuthKey>1234</AuthKey><MemberNo>1234</MemberNo><PCBangNo>1234</PCBangNo>`))

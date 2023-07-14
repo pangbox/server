@@ -28,12 +28,14 @@ import (
 	"github.com/pangbox/server/common/topology"
 	"github.com/pangbox/server/gen/proto/go/topologypb"
 	"github.com/pangbox/server/gen/proto/go/topologypb/topologypbconnect"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
 
 type TopologyServerOptions struct {
+	Logger zerolog.Logger
+
 	ServerIP       string
 	GameServerName string
 
@@ -67,6 +69,7 @@ func NewLocalTopology(ctx context.Context) *TopologyServer {
 }
 
 func (t *TopologyServer) Configure(opts TopologyServerOptions) error {
+	log := opts.Logger
 	server := topology.NewServer(topology.NewMemoryStorage([]*topologypb.ServerEntry{
 		{
 			Server: &topologypb.Server{
@@ -109,12 +112,12 @@ func (t *TopologyServer) Configure(opts TopologyServerOptions) error {
 		})
 
 		if ctx.Err() != nil {
-			log.Errorf("Topology service cancelled before server could start: %v", ctx.Err())
+			log.Error().Err(ctx.Err()).Msg("cancelled before topology server could start")
 		}
 
 		err := httpserver.Serve(t.pipe)
 		if err != nil && err != http.ErrServerClosed {
-			log.Errorf("Error serving topology server: %v", err)
+			log.Error().Err(err).Msg("error serving topology server")
 		}
 	}
 
