@@ -131,23 +131,33 @@ type TopologyServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewTopologyServiceHandler(svc TopologyServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle(TopologyServiceAddServerProcedure, connect_go.NewUnaryHandler(
+	topologyServiceAddServerHandler := connect_go.NewUnaryHandler(
 		TopologyServiceAddServerProcedure,
 		svc.AddServer,
 		opts...,
-	))
-	mux.Handle(TopologyServiceListServersProcedure, connect_go.NewUnaryHandler(
+	)
+	topologyServiceListServersHandler := connect_go.NewUnaryHandler(
 		TopologyServiceListServersProcedure,
 		svc.ListServers,
 		opts...,
-	))
-	mux.Handle(TopologyServiceGetServerProcedure, connect_go.NewUnaryHandler(
+	)
+	topologyServiceGetServerHandler := connect_go.NewUnaryHandler(
 		TopologyServiceGetServerProcedure,
 		svc.GetServer,
 		opts...,
-	))
-	return "/.TopologyService/", mux
+	)
+	return "/.TopologyService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case TopologyServiceAddServerProcedure:
+			topologyServiceAddServerHandler.ServeHTTP(w, r)
+		case TopologyServiceListServersProcedure:
+			topologyServiceListServersHandler.ServeHTTP(w, r)
+		case TopologyServiceGetServerProcedure:
+			topologyServiceGetServerHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedTopologyServiceHandler returns CodeUnimplemented from all methods.
