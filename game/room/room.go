@@ -334,7 +334,13 @@ func (r *Room) handlePlayerLeave(ctx context.Context, event RoomPlayerLeave) err
 
 func (r *Room) handlePlayerUpdateData(ctx context.Context, event RoomPlayerUpdateData) error {
 	if pair := r.players.GetPair(event.ConnID); pair != nil {
-		*pair.Value.Entry = *event.Entry
+		newEntry := *event.Entry
+		newEntry.Angle = pair.Value.Entry.Angle
+		newEntry.X = pair.Value.Entry.X
+		newEntry.Y = pair.Value.Entry.Y
+		newEntry.Z = pair.Value.Entry.Z
+		newEntry.StatusFlags = pair.Value.Entry.StatusFlags
+		*pair.Value.Entry = newEntry
 		pair.Value.PlayerData = event.PlayerData
 		// TODO: only need to send delta here
 		return r.broadcastPlayerList(ctx)
